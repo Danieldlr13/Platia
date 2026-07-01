@@ -13,6 +13,10 @@ import { GraficoCategoria } from "@/components/GraficoCategoria";
 import { GraficoTendencia } from "@/components/GraficoTendencia";
 import { ListaTransacciones } from "@/components/ListaTransacciones";
 
+// Se renderiza en cada petición para reflejar siempre los datos actuales de
+// Supabase (si fuera estático, mostraría los datos del momento del build).
+export const dynamic = "force-dynamic";
+
 function buscarMes(tendencia: ResumenMes[], clave: string): ResumenMes {
   return (
     tendencia.find((m) => m.clave === clave) ?? {
