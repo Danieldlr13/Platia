@@ -39,9 +39,14 @@ async function main() {
   let ignorados = 0;
 
   try {
-    const uids = await client.search({ seen: false }, { uid: true });
+    // Solo correos NO leídos de Bancolombia. El filtro por remitente evita
+    // tocar (y marcar como leído) cualquier otro correo del buzón.
+    const uids = await client.search(
+      { seen: false, from: "notificacionesbancolombia.com" },
+      { uid: true },
+    );
     if (!uids || uids.length === 0) {
-      console.log("No hay correos nuevos.");
+      console.log("No hay correos nuevos de Bancolombia.");
     } else {
       // Paso 1: leer y parsear durante el fetch. NO se emiten comandos IMAP
       // aquí dentro (imapflow no lo permite mientras el fetch está abierto).
