@@ -39,7 +39,12 @@ export async function obtenerTransacciones(): Promise<OrigenDatos> {
   }
 
   const txs: TxUI[] = data.map((row: Record<string, unknown>) => {
-    const cat = row.categorias as { nombre?: string } | null;
+    // Supabase puede devolver la relación como objeto o como arreglo.
+    const catRaw = row.categorias as
+      | { nombre?: string }
+      | { nombre?: string }[]
+      | null;
+    const cat = Array.isArray(catRaw) ? catRaw[0] : catRaw;
     return {
       id: String(row.id),
       fecha: String(row.fecha),

@@ -72,6 +72,10 @@ async function main() {
     if (!uids || uids.length === 0) {
       console.log("No hay correos nuevos.");
     } else {
+      // Paso 1: leer y parsear durante el fetch. NO se emiten comandos IMAP
+      // aquí dentro (imapflow no lo permite mientras el fetch está abierto).
+      const pendientes: Array<{ record: Record<string, unknown>; resumen: string }> = [];
+
       for await (const msg of client.fetch(uids, { uid: true, source: true }, { uid: true })) {
         leidos++;
         const correo = await simpleParser(msg.source as Buffer);
@@ -82,8 +86,8 @@ async function main() {
         if (r.ok && r.esGasto && r.movimiento) {
           const m = r.movimiento;
           const categoria = clasificar(m.comercio);
-          const { error } = await supabase.from("transacciones").upsert(
-            {
+          pendientes.push({
+            record: {
               user_id: userId,
               fecha: m.fecha.toISOString(),
               monto: m.monto,
@@ -96,22 +100,32 @@ async function main() {
               raw_texto: texto.slice(0, 500),
               email_message_id: messageId,
             },
-            { onConflict: "user_id,email_message_id", ignoreDuplicates: true },
-          );
-          if (error) {
-            console.error(`  ✗ Error al guardar ${messageId}:`, error.message);
-          } else {
-            guardados++;
-            console.log(`  ✓ ${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`);
-          }
+            resumen: `${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`,
+          });
         } else {
           ignorados++;
           console.log(`  – Ignorado (${r.razon ?? "sin razón"})`);
         }
-
-        // Marcar como leído para no reprocesarlo.
-        await client.messageFlagsAdd(msg.uid, ["\\Seen"], { uid: true });
       }
+
+      // Paso 2: guardar en Supabase (el fetch ya terminó).
+      for (const p of pendientes) {
+        const { error } = await supabase
+          .from("transacciones")
+          .upsert(p.record, {
+            onConflict: "user_id,email_message_id",
+            ignoreDuplicates: true,
+          });
+        if (error) {
+          console.error("  ✗ Error al guardar:", error.message);
+        } else {
+          guardados++;
+          console.log(`  ✓ ${p.resumen}`);
+        }
+      }
+
+      // Paso 3: marcar como leídos en un solo comando IMAP (sin fetch activo).
+      await client.messageFlagsAdd(uids, ["\\Seen"], { uid: true });
     }
   } finally {
     lock.release();
