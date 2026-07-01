@@ -4,47 +4,18 @@
 // Se ejecuta periódicamente (GitHub Actions). Uso local: `npm run ingest`.
 // Requiere las variables de entorno de .env.example.
 
+import "../lib/env";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { parsearCorreo } from "../lib/parser";
 import { clasificar } from "../lib/classifier";
 import { crearClienteServicio } from "../lib/supabase";
-import type { Categoria } from "../lib/types";
+import { obtenerCategorias } from "../lib/categorias";
 
 function requerir(nombre: string): string {
   const v = process.env[nombre];
   if (!v) throw new Error(`Falta la variable de entorno ${nombre}`);
   return v;
-}
-
-/** Devuelve un mapa { nombreCategoria -> id }, creando las que falten. */
-async function obtenerCategorias(
-  supabase: ReturnType<typeof crearClienteServicio>,
-  userId: string,
-): Promise<Map<Categoria, string>> {
-  const mapa = new Map<Categoria, string>();
-  const { data } = await supabase
-    .from("categorias")
-    .select("id, nombre")
-    .eq("user_id", userId);
-
-  for (const c of data ?? []) mapa.set(c.nombre as Categoria, c.id);
-
-  const colores: Record<Categoria, string> = {
-    Transporte: "#00C389",
-    Otros: "#9CA3AF",
-  };
-  for (const nombre of ["Transporte", "Otros"] as Categoria[]) {
-    if (!mapa.has(nombre)) {
-      const { data: nueva } = await supabase
-        .from("categorias")
-        .insert({ user_id: userId, nombre, color: colores[nombre] })
-        .select("id")
-        .single();
-      if (nueva) mapa.set(nombre, nueva.id);
-    }
-  }
-  return mapa;
 }
 
 async function main() {
