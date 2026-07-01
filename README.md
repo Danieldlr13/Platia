@@ -41,11 +41,11 @@ configures las variables de entorno.
 
 ## Puesta en marcha (producción)
 
-1. **Buzón de ingesta** — en `bancogastos13@gmail.com`: activar verificación en dos
+1. **Buzón de ingesta** — en `dandelessp@gmail.com`: activar verificación en dos
    pasos y generar una **contraseña de aplicación** (Google → Seguridad → Contraseñas
    de aplicaciones).
 2. **Reenvío** — en el Gmail del cliente, crear un filtro:
-   *De:* `notificacionesbancolombia.com` → **Reenviar a** `bancogastos13@gmail.com`.
+   *De:* `notificacionesbancolombia.com` → **Reenviar a** `dandelessp@gmail.com`.
    (Para el histórico: buscar esos correos y reenviarlos en lote.)
 3. **Supabase** — crear proyecto, ejecutar `db/schema.sql`, crear el usuario en
    *Authentication → Users*, ajustar el correo en `db/seed.sql` y ejecutarlo.
