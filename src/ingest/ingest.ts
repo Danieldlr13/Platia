@@ -39,10 +39,18 @@ async function main() {
   let ignorados = 0;
 
   try {
-    // Solo correos NO leídos de Bancolombia. El filtro por remitente evita
-    // tocar (y marcar como leído) cualquier otro correo del buzón.
+    // Correos NO leídos de Bancolombia: por remitente (reenvío automático, que
+    // conserva el From original) o por asunto (reenvío manual, útil para el
+    // histórico). El parser es el filtro final: solo se guarda lo que parsea,
+    // así no se toca ningún otro correo del buzón.
     const uids = await client.search(
-      { seen: false, from: "notificacionesbancolombia.com" },
+      {
+        seen: false,
+        or: [
+          { from: "notificacionesbancolombia.com" },
+          { subject: "Alertas y Notificaciones" },
+        ],
+      },
       { uid: true },
     );
     if (!uids || uids.length === 0) {
