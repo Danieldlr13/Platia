@@ -1,0 +1,16 @@
+# Datos sensibles del cliente — NO versionar
+*.eml
+.env
+.env.*
+*.local
+
+# Dependencias / build
+node_modules/
+.next/
+dist/
+build/
+out/
+
+# Sistema
+.DS_Store
+*.log
