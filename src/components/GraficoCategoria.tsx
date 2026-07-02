@@ -12,7 +12,7 @@ import { formatoCOP, type GastoCategoria } from "@/lib/agregaciones";
 
 const COLORES: Record<string, string> = {
   Transporte: "#00C389",
-  Otros: "#CBD5E1",
+  Otros: "#94A3B8",
 };
 
 export function GraficoCategoria({ datos }: { datos: GastoCategoria[] }) {
@@ -36,6 +36,7 @@ export function GraficoCategoria({ datos }: { datos: GastoCategoria[] }) {
           innerRadius={60}
           outerRadius={100}
           paddingAngle={2}
+          isAnimationActive={false}
         >
           {conDatos.map((d) => (
             <Cell key={d.categoria} fill={COLORES[d.categoria] ?? "#94A3B8"} />
