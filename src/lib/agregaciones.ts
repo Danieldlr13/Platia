@@ -93,3 +93,153 @@ export function formatoCOP(monto: number): string {
     maximumFractionDigits: 0,
   }).format(monto);
 }
+
+// ─── Método de pago ──────────────────────────────────────────────────────────
+
+export type MetodoPago = "Efectivo" | "Tarjeta";
+
+/** true si la tarjeta indica pago en efectivo ("Efectivo"/"Cash"). */
+export function esEfectivo(tarjeta: string): boolean {
+  return /efectivo|cash/i.test(tarjeta ?? "");
+}
+
+export function metodoPago(tarjeta: string): MetodoPago {
+  return esEfectivo(tarjeta) ? "Efectivo" : "Tarjeta";
+}
+
+// ─── Filtros ─────────────────────────────────────────────────────────────────
+
+export type Periodo =
+  | { tipo: "mes"; clave: string }
+  | { tipo: "rango"; desde: string; hasta: string }
+  | { tipo: "todos" };
+
+export interface Filtros {
+  periodo: Periodo;
+  categoria: Categoria | "todas";
+  metodo: MetodoPago | "todos";
+  comercio: string | "todos";
+}
+
+/** "YYYY-MM-DD" en hora Colombia (UTC-5) a partir de una fecha ISO. */
+export function diaLocalCO(fechaIso: string): string {
+  const d = new Date(new Date(fechaIso).getTime() - 5 * 60 * 60 * 1000);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function pasaPeriodo(t: TxUI, periodo: Periodo): boolean {
+  if (periodo.tipo === "todos") return true;
+  if (periodo.tipo === "mes") return claveMes(t.fecha) === periodo.clave;
+  const dia = diaLocalCO(t.fecha);
+  if (periodo.desde && dia < periodo.desde) return false;
+  if (periodo.hasta && dia > periodo.hasta) return false;
+  return true;
+}
+
+/** Aplica todos los filtros (AND) y devuelve el subconjunto. */
+export function filtrar(txs: TxUI[], f: Filtros): TxUI[] {
+  return txs.filter((t) => {
+    if (!pasaPeriodo(t, f.periodo)) return false;
+    if (f.categoria !== "todas" && t.categoria !== f.categoria) return false;
+    if (f.metodo !== "todos" && metodoPago(t.tarjeta) !== f.metodo) return false;
+    if (f.comercio !== "todos" && t.comercio !== f.comercio) return false;
+    return true;
+  });
+}
+
+// ─── Agrupaciones ────────────────────────────────────────────────────────────
+
+export interface KPIs {
+  transporte: number;
+  otros: number;
+  total: number;
+  conteo: number;
+}
+
+export function calcularKPIs(txs: TxUI[]): KPIs {
+  let transporte = 0;
+  let otros = 0;
+  for (const t of txs) {
+    if (t.categoria === "Transporte") transporte += t.monto;
+    else otros += t.monto;
+  }
+  return { transporte, otros, total: transporte + otros, conteo: txs.length };
+}
+
+/** Gasto por categoría (Transporte/Otros) sobre un conjunto ya filtrado. */
+export function porCategoria(txs: TxUI[]): GastoCategoria[] {
+  const k = calcularKPIs(txs);
+  return [
+    { categoria: "Transporte", monto: k.transporte },
+    { categoria: "Otros", monto: k.otros },
+  ];
+}
+
+export interface ComercioAgrupado {
+  comercio: string;
+  monto: number;
+  conteo: number;
+  categoria: Categoria;
+}
+
+/**
+ * Agrupa por comercio y ordena desc por monto. Si hay más de `n` comercios, los
+ * de menor gasto se pliegan en un bucket "Otros comercios".
+ */
+export function topComercios(txs: TxUI[], n = 8): ComercioAgrupado[] {
+  const mapa = new Map<string, ComercioAgrupado>();
+  for (const t of txs) {
+    const r =
+      mapa.get(t.comercio) ??
+      { comercio: t.comercio, monto: 0, conteo: 0, categoria: t.categoria };
+    r.monto += t.monto;
+    r.conteo += 1;
+    if (t.categoria === "Transporte") r.categoria = "Transporte";
+    mapa.set(t.comercio, r);
+  }
+  const orden = [...mapa.values()].sort((a, b) => b.monto - a.monto);
+  if (orden.length <= n) return orden;
+  const resto = orden.slice(n);
+  const otros: ComercioAgrupado = {
+    comercio: "Otros comercios",
+    monto: resto.reduce((a, c) => a + c.monto, 0),
+    conteo: resto.reduce((a, c) => a + c.conteo, 0),
+    categoria: "Otros",
+  };
+  return [...orden.slice(0, n), otros];
+}
+
+export interface MetodoAgrupado {
+  metodo: MetodoPago;
+  monto: number;
+  conteo: number;
+}
+
+/** Reparte el gasto entre Efectivo y Tarjeta. Omite el método sin movimientos. */
+export function porMetodoPago(txs: TxUI[]): MetodoAgrupado[] {
+  const efectivo: MetodoAgrupado = { metodo: "Efectivo", monto: 0, conteo: 0 };
+  const tarjeta: MetodoAgrupado = { metodo: "Tarjeta", monto: 0, conteo: 0 };
+  for (const t of txs) {
+    const dest = esEfectivo(t.tarjeta) ? efectivo : tarjeta;
+    dest.monto += t.monto;
+    dest.conteo += 1;
+  }
+  return [efectivo, tarjeta].filter((m) => m.conteo > 0);
+}
+
+/** Claves de mes presentes en los datos, de más reciente a más antiguo. */
+export function mesesDisponibles(txs: TxUI[]): string[] {
+  const set = new Set<string>();
+  for (const t of txs) set.add(claveMes(t.fecha));
+  return [...set].sort((a, b) => b.localeCompare(a));
+}
+
+/** Comercios presentes, en orden alfabético. */
+export function comerciosDisponibles(txs: TxUI[]): string[] {
+  const set = new Set<string>();
+  for (const t of txs) set.add(t.comercio);
+  return [...set].sort((a, b) => a.localeCompare(b));
+}

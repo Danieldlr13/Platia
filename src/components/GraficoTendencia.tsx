@@ -34,8 +34,8 @@ export function GraficoTendencia({ datos }: { datos: ResumenMes[] }) {
         />
         <Tooltip formatter={(v: number) => formatoCOP(v)} />
         <Legend />
-        <Bar dataKey="Transporte" stackId="a" fill="#00C389" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="Otros" stackId="a" fill="#CBD5E1" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="Transporte" stackId="a" fill="#00C389" radius={[0, 0, 0, 0]} isAnimationActive={false} />
+        <Bar dataKey="Otros" stackId="a" fill="#94A3B8" radius={[4, 4, 0, 0]} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
