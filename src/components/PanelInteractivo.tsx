@@ -16,7 +16,7 @@ import {
 } from "@/lib/agregaciones";
 import type { TxUI } from "@/lib/demo-data";
 import type { Categoria } from "@/lib/types";
-import { actualizarCategoria } from "@/lib/acciones";
+import { actualizarCategoria, cerrarSesion } from "@/lib/acciones";
 import { BarraFiltros } from "./BarraFiltros";
 import { TarjetaKPI } from "./TarjetaKPI";
 import { GraficoCategoria } from "./GraficoCategoria";
@@ -37,9 +37,11 @@ function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNo
 export function PanelInteractivo({
   txsIniciales,
   modo,
+  userEmail,
 }: {
   txsIniciales: TxUI[];
   modo: "supabase" | "demo";
+  userEmail?: string;
 }) {
   const [txs, setTxs] = useState(txsIniciales);
   const [, startTransition] = useTransition();
@@ -100,18 +102,39 @@ export function PanelInteractivo({
 
   return (
     <main className="mx-auto max-w-6xl px-3 py-6 sm:px-4">
-      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
             Mis gastos
           </h1>
           <p className="text-sm text-gray-500">Mostrando {subtitulo}</p>
         </div>
-        {modo === "demo" && (
-          <span className="rounded-full bg-banco-amarillo/30 px-3 py-1 text-xs font-medium text-banco-oscuro">
-            Datos de demostración
-          </span>
-        )}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {modo === "demo" && (
+            <span className="rounded-full bg-banco-amarillo/30 px-3 py-1 text-xs font-medium text-banco-oscuro">
+              Datos de demostración
+            </span>
+          )}
+          <a
+            href="/guia"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          >
+            Guía
+          </a>
+          {userEmail && (
+            <form action={cerrarSesion} className="flex items-center gap-2">
+              <span className="hidden text-xs text-gray-500 sm:inline">
+                {userEmail}
+              </span>
+              <button
+                type="submit"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                Salir
+              </button>
+            </form>
+          )}
+        </div>
       </header>
 
       <BarraFiltros

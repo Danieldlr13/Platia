@@ -1,41 +1,45 @@
-// Fuente de datos del panel. Si Supabase está configurado, lee de ahí;
-// si no, usa datos de demostración para que el panel se vea igual.
+// Fuente de datos del panel. Si Supabase está configurado, lee las transacciones
+// del usuario con sesión iniciada (RLS aísla por auth.uid()); si no, usa datos
+// de demostración para que el panel se vea igual en dev local.
 //
 // Se ejecuta en el servidor (componentes de servidor de Next.js).
 
-import { crearClienteServicio } from "./supabase";
 import { generarDemo, type TxUI } from "./demo-data";
+import { crearClienteServidor } from "./supabase-server";
+import { supabaseConfigurado } from "./supabase";
 import type { Categoria } from "./types";
 
 export interface OrigenDatos {
   txs: TxUI[];
   modo: "supabase" | "demo";
-}
-
-function servicioConfigurado(): boolean {
-  return Boolean(
-    process.env.SUPABASE_URL &&
-      process.env.SUPABASE_SERVICE_ROLE_KEY &&
-      process.env.CUENTAS_USER_ID,
-  );
+  /** Correo del usuario con sesión (para el header). */
+  email?: string;
 }
 
 export async function obtenerTransacciones(): Promise<OrigenDatos> {
-  if (!servicioConfigurado()) {
+  if (!supabaseConfigurado()) {
     return { txs: generarDemo(), modo: "demo" };
   }
 
-  const supabase = crearClienteServicio();
-  const userId = process.env.CUENTAS_USER_ID!;
+  const supabase = await crearClienteServidor();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    // El middleware debería haber redirigido a /login; por seguridad, vacío.
+    return { txs: [], modo: "supabase" };
+  }
+
   const { data, error } = await supabase
     .from("transacciones")
     .select("id, fecha, monto, comercio, tarjeta, tipo, categorias(nombre)")
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .order("fecha", { ascending: false });
 
   if (error || !data) {
-    console.error("Error leyendo Supabase, uso demo:", error?.message);
-    return { txs: generarDemo(), modo: "demo" };
+    console.error("Error leyendo Supabase:", error?.message);
+    return { txs: [], modo: "supabase", email: user.email ?? undefined };
   }
 
   const txs: TxUI[] = data.map((row: Record<string, unknown>) => {
@@ -56,5 +60,5 @@ export async function obtenerTransacciones(): Promise<OrigenDatos> {
     };
   });
 
-  return { txs, modo: "supabase" };
+  return { txs, modo: "supabase", email: user.email ?? undefined };
 }
