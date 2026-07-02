@@ -199,7 +199,7 @@ export function PanelInteractivo({
       </section>
 
       <footer className="mt-8 text-center text-xs text-gray-400">
-        CUENTAS · gastos de Bancolombia
+        Platia · gastos de Bancolombia
       </footer>
     </main>
   );

@@ -1,7 +1,7 @@
 import { BotonCopiar } from "@/components/BotonCopiar";
 
 export const metadata = {
-  title: "Guía de implementación — CUENTAS",
+  title: "Guía de implementación",
 };
 
 const ENV_VARS = `IMAP_USER=
@@ -169,7 +169,7 @@ export default function GuiaPage() {
       </ol>
 
       <footer className="mt-8 text-center text-xs text-gray-400">
-        CUENTAS · guía de implementación
+        Platia · guía de implementación
       </footer>
     </main>
   );
