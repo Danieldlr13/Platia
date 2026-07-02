@@ -6,6 +6,8 @@ del resto.
 
 > Diseño completo en
 > [`docs/superpowers/specs/2026-07-01-cuentas-gastos-bancolombia-design.md`](docs/superpowers/specs/2026-07-01-cuentas-gastos-bancolombia-design.md).
+>
+> Arquitectura y flujos (diagramas): [`docs/arquitectura.md`](docs/arquitectura.md).
 
 ## Cómo funciona
 
@@ -26,6 +28,9 @@ Bancolombia → correo del cliente → [filtro Gmail reenvía] → buzón dedica
 | `db/schema.sql` · `db/seed.sql` | Base de datos y datos iniciales |
 | `app/` · `src/components/` | Panel web (Next.js + Recharts) |
 | `.github/workflows/ingest.yml` | Cron de ingesta cada 15 min |
+| `middleware.ts` · `app/login/` | Login (Supabase Auth) y protección de rutas |
+| `app/guia/` | Guía de implementación paso a paso (in-app) |
+| `docs/arquitectura.md` | Diagramas de arquitectura y flujos (Mermaid) |
 
 ## Desarrollo local
 
@@ -60,6 +65,8 @@ Ver `.env.example` para la lista completa de variables.
 ## Estado actual
 
 - ✅ Parser probado contra correos reales (Uber/DiDi → Transporte)
-- ✅ Panel con KPIs, gráfico por categoría, tendencia y lista (datos demo)
+- ✅ Panel con filtros, agrupaciones y gráficos (responsive)
 - ✅ Ingestor IMAP + esquema Supabase + cron
-- ⏳ Pendiente: login (Supabase Auth) y persistir la edición manual de categorías
+- ✅ Login con Supabase Auth + RLS (web multi-cliente) y edición de categoría persistente
+- ✅ Guía de implementación in-app (`/guia`) y diagramas de arquitectura
+- ⏳ Pendiente: ruteo correo→usuario en el ingestor (datos multi-tenant automáticos), deploy en Vercel
