@@ -18,6 +18,49 @@ function requerir(nombre: string): string {
   return v;
 }
 
+interface Candidato {
+  texto: string;
+  messageId: string;
+}
+
+/**
+ * De un correo saca los textos a parsear: su propio cuerpo y, si trae correos
+ * adjuntos (.eml), el cuerpo de cada uno. Esto cubre el reenvío normal (un
+ * correo) y el "reenviar como adjunto" (varios correos en uno solo) que se usa
+ * para migrar el histórico. Cada candidato lleva el Message-ID del correo
+ * original (adjunto) para deduplicar de forma estable.
+ */
+async function extraerCandidatos(
+  correo: Awaited<ReturnType<typeof simpleParser>>,
+  uid: number,
+): Promise<Candidato[]> {
+  const candidatos: Candidato[] = [];
+  if (correo.text) {
+    candidatos.push({ texto: correo.text, messageId: correo.messageId ?? `sin-id-${uid}` });
+  }
+  let i = 0;
+  for (const att of correo.attachments ?? []) {
+    const esCorreo =
+      att.contentType === "message/rfc822" ||
+      (att.filename ?? "").toLowerCase().endsWith(".eml");
+    if (esCorreo && att.content) {
+      try {
+        const interno = await simpleParser(att.content as Buffer);
+        if (interno.text) {
+          candidatos.push({
+            texto: interno.text,
+            messageId: interno.messageId ?? `${correo.messageId ?? uid}-adj${i}`,
+          });
+        }
+      } catch {
+        // Adjunto no parseable: se ignora.
+      }
+    }
+    i++;
+  }
+  return candidatos;
+}
+
 async function main() {
   const userId = requerir("CUENTAS_USER_ID");
   const supabase = crearClienteServicio();
@@ -63,32 +106,37 @@ async function main() {
       for await (const msg of client.fetch(uids, { uid: true, source: true }, { uid: true })) {
         leidos++;
         const correo = await simpleParser(msg.source as Buffer);
-        const texto = correo.text ?? "";
-        const messageId = correo.messageId ?? `sin-id-${msg.uid}`;
-        const r = parsearCorreo(texto);
+        const candidatos = await extraerCandidatos(correo, msg.uid);
+        let algunoValido = false;
 
-        if (r.ok && r.esGasto && r.movimiento) {
-          const m = r.movimiento;
-          const categoria = clasificar(m.comercio);
-          pendientes.push({
-            record: {
-              user_id: userId,
-              fecha: m.fecha.toISOString(),
-              monto: m.monto,
-              moneda: m.moneda,
-              comercio: m.comercio,
-              categoria_id: categorias.get(categoria) ?? null,
-              categoria_manual: false,
-              tarjeta: m.tarjeta,
-              tipo: m.tipo,
-              raw_texto: texto.slice(0, 500),
-              email_message_id: messageId,
-            },
-            resumen: `${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`,
-          });
-        } else {
+        for (const c of candidatos) {
+          const r = parsearCorreo(c.texto);
+          if (r.ok && r.esGasto && r.movimiento) {
+            algunoValido = true;
+            const m = r.movimiento;
+            const categoria = clasificar(m.comercio);
+            pendientes.push({
+              record: {
+                user_id: userId,
+                fecha: m.fecha.toISOString(),
+                monto: m.monto,
+                moneda: m.moneda,
+                comercio: m.comercio,
+                categoria_id: categorias.get(categoria) ?? null,
+                categoria_manual: false,
+                tarjeta: m.tarjeta,
+                tipo: m.tipo,
+                raw_texto: c.texto.slice(0, 500),
+                email_message_id: c.messageId,
+              },
+              resumen: `${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`,
+            });
+          }
+        }
+
+        if (!algunoValido) {
           ignorados++;
-          console.log(`  – Ignorado (${r.razon ?? "sin razón"})`);
+          console.log(`  – Correo sin gastos reconocibles (uid ${msg.uid})`);
         }
       }
 

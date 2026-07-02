@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "ingest": "tsx src/ingest/ingest.ts",
     "ingest:eml": "tsx scripts/probar-eml.ts",
-    "cargar:eml": "tsx scripts/cargar-eml.ts"
+    "cargar:eml": "tsx scripts/cargar-eml.ts",
+    "migrar:adjuntos": "tsx scripts/migrar-adjuntos.ts",
+    "migrar:uber": "tsx scripts/migrar-uber.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
