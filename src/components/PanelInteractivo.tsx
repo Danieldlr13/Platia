@@ -24,6 +24,7 @@ import { GraficoTendencia } from "./GraficoTendencia";
 import { GraficoTopComercios } from "./GraficoTopComercios";
 import { GraficoMetodoPago } from "./GraficoMetodoPago";
 import { ListaTransacciones } from "./ListaTransacciones";
+import { ModalGastos } from "./ModalGastos";
 
 function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -44,6 +45,7 @@ export function PanelInteractivo({
   userEmail?: string;
 }) {
   const [txs, setTxs] = useState(txsIniciales);
+  const [modalAbierto, setModalAbierto] = useState(false);
   const [, startTransition] = useTransition();
 
   const meses = useMemo(() => mesesDisponibles(txs), [txs]);
@@ -93,6 +95,27 @@ export function PanelInteractivo({
     });
   }
 
+  // Mutadores del estado de transacciones, para el modal de gastos manuales.
+  // Al tocar `txs`, los KPIs, gráficos y la tabla se recalculan solos.
+  function upsertTx(tx: TxUI) {
+    setTxs((prev) =>
+      prev.some((t) => t.id === tx.id)
+        ? prev.map((t) => (t.id === tx.id ? tx : t))
+        : [tx, ...prev],
+    );
+  }
+  function removeTx(id: string) {
+    setTxs((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  const gastosManuales = useMemo(
+    () =>
+      txs
+        .filter((t) => t.esManual)
+        .sort((a, b) => b.fecha.localeCompare(a.fecha)),
+    [txs],
+  );
+
   const subtitulo =
     filtros.periodo.tipo === "mes"
       ? etiquetaMes(filtros.periodo.clave)
@@ -115,12 +138,13 @@ export function PanelInteractivo({
               Datos de demostración
             </span>
           )}
-          <a
-            href="/gastos"
+          <button
+            type="button"
+            onClick={() => setModalAbierto(true)}
             className="rounded-lg bg-banco-verde px-3 py-1.5 text-sm font-medium text-white hover:brightness-95"
           >
             + Gasto
-          </a>
+          </button>
           <a
             href="/guia"
             className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
@@ -207,6 +231,14 @@ export function PanelInteractivo({
       <footer className="mt-8 text-center text-xs text-gray-400">
         Platia · gastos de Bancolombia
       </footer>
+
+      <ModalGastos
+        abierto={modalAbierto}
+        onCerrar={() => setModalAbierto(false)}
+        gastos={gastosManuales}
+        upsertTx={upsertTx}
+        removeTx={removeTx}
+      />
     </main>
   );
 }

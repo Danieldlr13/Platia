@@ -12,6 +12,8 @@ export interface TxUI {
   categoria: Categoria;
   tarjeta: string;
   tipo: string;
+  /** true si es un gasto anotado a mano (no vino por la automatización). */
+  esManual?: boolean;
 }
 
 interface Semilla {
