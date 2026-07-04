@@ -7,6 +7,7 @@
 import { generarDemo, type TxUI } from "./demo-data";
 import { crearClienteServidor } from "./supabase-server";
 import { supabaseConfigurado } from "./supabase";
+import { MARCA_MANUAL } from "./gastos-tipos";
 import type { Categoria } from "./types";
 
 export interface OrigenDatos {
@@ -33,7 +34,7 @@ export async function obtenerTransacciones(): Promise<OrigenDatos> {
 
   const { data, error } = await supabase
     .from("transacciones")
-    .select("id, fecha, monto, comercio, tarjeta, tipo, categorias(nombre)")
+    .select("id, fecha, monto, comercio, tarjeta, tipo, email_message_id, categorias(nombre)")
     .eq("user_id", user.id)
     .order("fecha", { ascending: false });
 
@@ -57,6 +58,7 @@ export async function obtenerTransacciones(): Promise<OrigenDatos> {
       categoria: (cat?.nombre as Categoria) ?? "Otros",
       tarjeta: String(row.tarjeta ?? ""),
       tipo: String(row.tipo ?? ""),
+      esManual: String(row.email_message_id ?? "").startsWith(MARCA_MANUAL),
     };
   });
 

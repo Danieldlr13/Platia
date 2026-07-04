@@ -74,6 +74,7 @@ export async function crearGasto(d: DatosGasto): Promise<ResultadoGasto> {
       categoria: d.categoria,
       tarjeta: record.tarjeta,
       tipo: record.tipo,
+      esManual: true,
     },
   };
 }
