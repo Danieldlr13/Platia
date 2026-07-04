@@ -8,10 +8,16 @@ import { crearClienteServidor } from "./supabase-server";
 import { obtenerCategorias } from "./categorias";
 import { supabaseConfigurado } from "./supabase";
 import { validarGasto, MARCA_MANUAL, type DatosGasto } from "./gastos-tipos";
+import type { TxUI } from "./demo-data";
 
 export interface ResultadoAccion {
   ok: boolean;
   error?: string;
+}
+
+export interface ResultadoGasto extends ResultadoAccion {
+  /** La fila creada, para que el cliente la muestre sin recargar la página. */
+  gasto?: TxUI;
 }
 
 async function sesion() {
@@ -27,7 +33,7 @@ function fechaISO(fecha: string): string {
   return `${fecha}T12:00:00-05:00`;
 }
 
-export async function crearGasto(d: DatosGasto): Promise<ResultadoAccion> {
+export async function crearGasto(d: DatosGasto): Promise<ResultadoGasto> {
   if (!supabaseConfigurado()) return { ok: true }; // demo
   const err = validarGasto(d);
   if (err) return { ok: false, error: err };
@@ -36,7 +42,7 @@ export async function crearGasto(d: DatosGasto): Promise<ResultadoAccion> {
   if (!user) return { ok: false, error: "Sin sesión" };
 
   const categorias = await obtenerCategorias(supabase, user.id);
-  const { error } = await supabase.from("transacciones").insert({
+  const record = {
     user_id: user.id,
     fecha: fechaISO(d.fecha),
     monto: d.monto,
@@ -48,10 +54,28 @@ export async function crearGasto(d: DatosGasto): Promise<ResultadoAccion> {
     tipo: "Manual",
     raw_texto: "Gasto manual",
     email_message_id: `${MARCA_MANUAL}${crypto.randomUUID()}`,
-  });
+  };
 
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  const { data, error } = await supabase
+    .from("transacciones")
+    .insert(record)
+    .select("id")
+    .single();
+
+  if (error || !data) return { ok: false, error: error?.message ?? "No se pudo crear." };
+
+  return {
+    ok: true,
+    gasto: {
+      id: String(data.id),
+      fecha: record.fecha,
+      monto: record.monto,
+      comercio: record.comercio,
+      categoria: d.categoria,
+      tarjeta: record.tarjeta,
+      tipo: record.tipo,
+    },
+  };
 }
 
 export async function actualizarGasto(
