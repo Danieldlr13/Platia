@@ -116,6 +116,12 @@ export function PanelInteractivo({
             </span>
           )}
           <a
+            href="/gastos"
+            className="rounded-lg bg-banco-verde px-3 py-1.5 text-sm font-medium text-white hover:brightness-95"
+          >
+            + Gasto
+          </a>
+          <a
             href="/guia"
             className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
           >
