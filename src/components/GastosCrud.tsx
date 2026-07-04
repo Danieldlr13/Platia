@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   crearGasto,
   actualizarGasto,
@@ -33,6 +32,10 @@ function hoy(): string {
   return `${d.getFullYear()}-${m}-${dd}`;
 }
 
+function porFechaDesc(a: TxUI, b: TxUI): number {
+  return b.fecha.localeCompare(a.fecha);
+}
+
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
@@ -43,7 +46,7 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
-  const router = useRouter();
+  const [gastos, setGastos] = useState<TxUI[]>(inicial);
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
   const [fecha, setFecha] = useState(hoy());
@@ -52,7 +55,6 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState<string | null>(null);
-  const [pendiente, startTransition] = useTransition();
 
   function limpiar() {
     setDescripcion("");
@@ -62,6 +64,19 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
     setMetodo("Efectivo");
     setEditandoId(null);
     setError(null);
+  }
+
+  // Construye una TxUI a partir de los datos del formulario (para la UI optimista).
+  function aTxUI(id: string, d: DatosGasto): TxUI {
+    return {
+      id,
+      fecha: `${d.fecha}T12:00:00-05:00`,
+      monto: d.monto,
+      comercio: d.descripcion.trim(),
+      categoria: d.categoria,
+      tarjeta: d.metodo,
+      tipo: "Manual",
+    };
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -79,17 +94,41 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
       return;
     }
     setError(null);
-    startTransition(async () => {
-      const r = editandoId
-        ? await actualizarGasto(editandoId, datos)
-        : await crearGasto(datos);
-      if (!r.ok) {
-        setError(r.error ?? "No se pudo guardar.");
-        return;
-      }
+
+    if (editandoId) {
+      // Optimista: reemplaza en la lista y sale del modo edición al instante.
+      const id = editandoId;
+      const anterior = gastos.find((g) => g.id === id);
+      setGastos((gs) =>
+        gs.map((g) => (g.id === id ? aTxUI(id, datos) : g)).sort(porFechaDesc),
+      );
       limpiar();
-      router.refresh();
-    });
+      void (async () => {
+        const r = await actualizarGasto(id, datos);
+        if (!r.ok && anterior) {
+          // Revierte solo este ítem, sin tocar el resto de la lista.
+          setGastos((gs) =>
+            gs.map((g) => (g.id === id ? anterior : g)).sort(porFechaDesc),
+          );
+          setError(r.error ?? "No se pudo guardar.");
+        }
+      })();
+    } else {
+      // Optimista: agrega con un id temporal y lo sustituye por el real al volver.
+      const tempId = `temp-${crypto.randomUUID()}`;
+      setGastos((gs) => [aTxUI(tempId, datos), ...gs].sort(porFechaDesc));
+      limpiar();
+      void (async () => {
+        const r = await crearGasto(datos);
+        if (!r.ok || !r.gasto) {
+          setGastos((gs) => gs.filter((g) => g.id !== tempId)); // quita solo el temporal
+          setError(r.error ?? "No se pudo guardar.");
+          return;
+        }
+        const real = r.gasto;
+        setGastos((gs) => gs.map((g) => (g.id === tempId ? real : g)));
+      })();
+    }
   }
 
   function editar(g: TxUI) {
@@ -109,12 +148,17 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
       setConfirmando(id);
       return;
     }
-    startTransition(async () => {
+    setConfirmando(null);
+    const eliminado = gastos.find((g) => g.id === id);
+    setGastos((gs) => gs.filter((g) => g.id !== id)); // optimista
+    void (async () => {
       const r = await eliminarGasto(id);
-      setConfirmando(null);
-      if (r.ok) router.refresh();
-      else setError(r.error ?? "No se pudo eliminar.");
-    });
+      if (!r.ok && eliminado) {
+        // Revierte solo este ítem.
+        setGastos((gs) => [eliminado, ...gs].sort(porFechaDesc));
+        setError(r.error ?? "No se pudo eliminar.");
+      }
+    })();
   }
 
   return (
@@ -204,10 +248,9 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
         <div className="mt-4 flex items-center gap-2">
           <button
             type="submit"
-            disabled={pendiente}
-            className="rounded-lg bg-banco-verde px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-60"
+            className="rounded-lg bg-banco-verde px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95"
           >
-            {pendiente ? "Guardando…" : editandoId ? "Guardar cambios" : "Agregar gasto"}
+            {editandoId ? "Guardar cambios" : "Agregar gasto"}
           </button>
           {editandoId && (
             <button
@@ -224,16 +267,16 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
       {/* Lista */}
       <h2 className="mb-3 text-sm font-semibold text-gray-700">
         Tus gastos manuales{" "}
-        <span className="font-normal text-gray-400">({inicial.length})</span>
+        <span className="font-normal text-gray-400">({gastos.length})</span>
       </h2>
 
-      {inicial.length === 0 ? (
+      {gastos.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400">
           Aún no has anotado gastos manuales.
         </p>
       ) : (
         <ul className="space-y-2">
-          {inicial.map((g) => (
+          {gastos.map((g) => (
             <li
               key={g.id}
               className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4"
@@ -259,8 +302,7 @@ export function GastosCrud({ inicial }: { inicial: TxUI[] }) {
                 <button
                   type="button"
                   onClick={() => eliminar(g.id)}
-                  disabled={pendiente}
-                  className={`rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-60 ${
+                  className={`rounded-md border px-2 py-1 text-xs font-medium ${
                     confirmando === g.id
                       ? "border-red-500 bg-red-500 text-white"
                       : "border-gray-300 bg-white text-red-600 hover:bg-red-50"
