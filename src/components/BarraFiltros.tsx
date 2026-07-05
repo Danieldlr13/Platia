@@ -13,6 +13,29 @@ interface Props {
 const SELECT_CLS =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-banco-verde focus:outline-none focus:ring-1 focus:ring-banco-verde sm:w-auto";
 
+// Presets de rango rápido por días (hasta hoy, hora Colombia local del navegador).
+const PRESETS = [
+  { label: "Hoy", dias: 0 },
+  { label: "7 días", dias: 6 },
+  { label: "30 días", dias: 29 },
+  { label: "90 días", dias: 89 },
+];
+
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+function fechaStr(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function hoyStr(): string {
+  return fechaStr(new Date());
+}
+function hoyMenos(dias: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return fechaStr(d);
+}
+
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
@@ -35,8 +58,22 @@ export function BarraFiltros({ filtros, meses, comercios, onChange, onLimpiar }:
     else onChange({ ...filtros, periodo: { tipo: "mes", clave: v.slice(4) } });
   }
 
+  function aplicarPreset(dias: number) {
+    onChange({
+      ...filtros,
+      periodo: { tipo: "rango", desde: hoyMenos(dias), hasta: hoyStr() },
+    });
+  }
+  function presetActivo(dias: number): boolean {
+    return (
+      periodo.tipo === "rango" &&
+      periodo.desde === hoyMenos(dias) &&
+      periodo.hasta === hoyStr()
+    );
+  }
+
   return (
-    <div className="sticky top-0 z-10 -mx-3 mb-6 border-b border-gray-200 bg-gray-50/90 px-3 py-3 backdrop-blur sm:-mx-4 sm:px-4">
+    <div className="-mx-4 mb-6 border-b border-gray-200 px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <Campo label="Periodo">
           <select
@@ -135,6 +172,25 @@ export function BarraFiltros({ filtros, meses, comercios, onChange, onLimpiar }:
         >
           Limpiar
         </button>
+      </div>
+
+      {/* Rango rápido por días */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-xs font-medium text-gray-400">Rápido:</span>
+        {PRESETS.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => aplicarPreset(p.dias)}
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+              presetActivo(p.dias)
+                ? "border-banco-verde bg-banco-verde/10 text-banco-verde"
+                : "border-gray-300 bg-white text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
     </div>
   );

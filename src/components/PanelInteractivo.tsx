@@ -124,7 +124,7 @@ export function PanelInteractivo({
         : "todo el histórico";
 
   return (
-    <main className="mx-auto max-w-6xl px-3 py-6 sm:px-4">
+    <main className="px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
@@ -132,7 +132,7 @@ export function PanelInteractivo({
           </h1>
           <p className="text-sm text-gray-500">Mostrando {subtitulo}</p>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {modo === "demo" && (
             <span className="rounded-full bg-banco-amarillo/30 px-3 py-1 text-xs font-medium text-banco-oscuro">
               Datos de demostración
@@ -178,6 +178,11 @@ export function PanelInteractivo({
       {/* KPIs */}
       <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <TarjetaKPI
+          titulo="Gasto total"
+          monto={kpis.total}
+          comparacion={kpisPrev ? { anterior: kpisPrev.total } : undefined}
+        />
+        <TarjetaKPI
           titulo="Transporte"
           monto={kpis.transporte}
           destacado
@@ -187,11 +192,6 @@ export function PanelInteractivo({
           titulo="Otros gastos"
           monto={kpis.otros}
           comparacion={kpisPrev ? { anterior: kpisPrev.otros } : undefined}
-        />
-        <TarjetaKPI
-          titulo="Gasto total"
-          monto={kpis.total}
-          comparacion={kpisPrev ? { anterior: kpisPrev.total } : undefined}
         />
         <TarjetaKPI
           titulo="Movimientos"

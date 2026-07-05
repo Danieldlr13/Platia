@@ -61,7 +61,7 @@ export function GraficoTopComercios({ datos }: { datos: ComercioAgrupado[] }) {
             `${item.payload?.conteo ?? 0} mov.`,
           ]}
         />
-        <Bar dataKey="monto" radius={[0, 4, 4, 0]} barSize={20} isAnimationActive={false}>
+        <Bar dataKey="monto" radius={[0, 6, 6, 0]} barSize={22} isAnimationActive={false}>
           {datos.map((d, i) => (
             <Cell key={i} fill={COLOR[d.categoria] ?? "#94A3B8"} />
           ))}
