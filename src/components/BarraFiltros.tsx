@@ -12,7 +12,7 @@ interface Props {
 }
 
 const SELECT_CLS =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-banco-verde focus:outline-none focus:ring-1 focus:ring-banco-verde sm:w-auto";
+  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-banco-verde focus:outline-none focus:ring-1 focus:ring-banco-verde";
 
 // Presets de rango rápido por días (hasta hoy, hora Colombia local del navegador).
 const PRESETS = [
@@ -39,7 +39,7 @@ function hoyMenos(dias: number): string {
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className="flex flex-col gap-1 sm:min-w-[160px] sm:max-w-[240px] sm:flex-1">
       <span className="text-xs font-medium text-gray-500">{label}</span>
       {children}
     </label>

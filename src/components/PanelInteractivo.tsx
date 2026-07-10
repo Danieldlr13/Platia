@@ -292,8 +292,10 @@ export function PanelInteractivo({
         />
       </section>
 
-      {/* Gráficos */}
-      <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Gráficos — items-start: cada tarjeta toma su alto natural (si no, la
+          tarjeta más corta se estira para igualar a su vecina más alta y deja
+          un hueco vacío, p. ej. Tendencia vs. Top comercios con muchas filas). */}
+      <section className="mb-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <Tarjeta titulo="Gasto por categoría">
           <GraficoCategoria datos={datosCategoria} colores={coloresCategorias} />
         </Tarjeta>
