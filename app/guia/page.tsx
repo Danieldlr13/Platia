@@ -113,8 +113,8 @@ function FilaValor({ v }: { v: Valor }) {
           <span className="mr-2 text-xs text-gray-400">{v.etiqueta}:</span>
         )}
         <code
-          className={`rounded bg-gray-100 px-2 py-1 text-xs text-gray-800 ${
-            v.multilinea ? "block whitespace-pre overflow-x-auto" : "break-all"
+          className={`block overflow-x-auto rounded bg-gray-100 px-2 py-1 text-xs text-gray-800 ${
+            v.multilinea ? "whitespace-pre" : "whitespace-nowrap"
           }`}
         >
           {v.valor}
