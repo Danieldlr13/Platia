@@ -84,52 +84,57 @@ export function Donut({ datos }: { datos: SegmentoDonut[] }) {
   }
 
   return (
-    <div>
-      <ResponsiveContainer width="100%" height={210}>
-        <PieChart>
-          <Pie
-            data={conDatos}
-            dataKey="monto"
-            nameKey="nombre"
-            innerRadius={62}
-            outerRadius={95}
-            paddingAngle={2}
-            cornerRadius={6}
-            stroke="none"
-            isAnimationActive={false}
-            label={EtiquetaSegmento as never}
-            labelLine={false}
-          >
-            {conDatos.map((d) => (
-              <Cell key={d.nombre} fill={d.color} />
-            ))}
-            <Label
-              position="center"
-              content={(props: any) => {
-                const cx = props?.viewBox?.cx ?? 0;
-                const cy = props?.viewBox?.cy ?? 0;
-                return (
-                  <text x={cx} y={cy} textAnchor="middle">
-                    <tspan
-                      x={cx}
-                      dy="-0.2em"
-                      style={{ fontSize: 17, fontWeight: 700, fill: "#111827" }}
-                    >
-                      {formatoCOP(total)}
-                    </tspan>
-                    <tspan x={cx} dy="1.5em" style={{ fontSize: 11, fill: "#9CA3AF" }}>
-                      Total
-                    </tspan>
-                  </text>
-                );
-              }}
-            />
-          </Pie>
-          <Tooltip formatter={(v: number) => formatoCOP(v)} />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+      {/* Tamaño fijo (no ResponsiveContainer al 100%): en tarjetas anchas, un
+          donut que se centra en un contenedor gigante deja franjas vacías a los
+          lados. Con ancho fijo, la leyenda de al lado ocupa el espacio sobrante. */}
+      <div className="mx-auto w-full max-w-[220px] sm:mx-0 sm:w-[200px] sm:shrink-0">
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie
+              data={conDatos}
+              dataKey="monto"
+              nameKey="nombre"
+              innerRadius={62}
+              outerRadius={95}
+              paddingAngle={2}
+              cornerRadius={6}
+              stroke="none"
+              isAnimationActive={false}
+              label={EtiquetaSegmento as never}
+              labelLine={false}
+            >
+              {conDatos.map((d) => (
+                <Cell key={d.nombre} fill={d.color} />
+              ))}
+              <Label
+                position="center"
+                content={(props: any) => {
+                  const cx = props?.viewBox?.cx ?? 0;
+                  const cy = props?.viewBox?.cy ?? 0;
+                  return (
+                    <text x={cx} y={cy} textAnchor="middle">
+                      <tspan
+                        x={cx}
+                        dy="-0.2em"
+                        style={{ fontSize: 17, fontWeight: 700, fill: "#111827" }}
+                      >
+                        {formatoCOP(total)}
+                      </tspan>
+                      <tspan x={cx} dy="1.5em" style={{ fontSize: 11, fill: "#9CA3AF" }}>
+                        Total
+                      </tspan>
+                    </text>
+                  );
+                }}
+              />
+            </Pie>
+            <Tooltip formatter={(v: number) => formatoCOP(v)} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
 
-      <ul className="mt-2 space-y-1.5">
+      <ul className="space-y-1.5 sm:min-w-0 sm:flex-1">
         {conDatos.map((d) => {
           const pct = total > 0 ? Math.round((d.monto / total) * 100) : 0;
           return (
@@ -138,11 +143,13 @@ export function Donut({ datos }: { datos: SegmentoDonut[] }) {
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: d.color }}
               />
-              <span className="text-gray-600">{d.nombre}</span>
-              <span className="ml-auto font-semibold text-gray-900">
+              <span className="truncate text-gray-600">{d.nombre}</span>
+              <span className="ml-auto whitespace-nowrap font-semibold text-gray-900">
                 {formatoCOP(d.monto)}
               </span>
-              <span className="w-9 text-right text-xs text-gray-400">{pct}%</span>
+              <span className="w-9 shrink-0 text-right text-xs text-gray-400">
+                {pct}%
+              </span>
             </li>
           );
         })}
