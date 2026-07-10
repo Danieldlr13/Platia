@@ -215,54 +215,58 @@ export function ModalCategorias({
           {categorias.map((c) => (
             <li
               key={c.id}
-              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3"
+              className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:gap-3"
             >
-              <span
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ background: c.color }}
-              />
-              <span className="min-w-0 flex-1 truncate font-medium text-gray-800">
-                {c.nombre}
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ background: c.color }}
+                />
+                <span className="min-w-0 flex-1 truncate font-medium text-gray-800">
+                  {c.nombre}
+                </span>
                 {esProtegida(c.nombre) && (
-                  <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
+                  <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-400">
                     sistema
                   </span>
                 )}
-              </span>
+              </div>
 
               {borrandoId === c.id ? (
-                <div className="flex items-center gap-2">
-                  <span className="hidden text-xs text-gray-400 sm:inline">
-                    mover a
-                  </span>
-                  <select
-                    value={destino}
-                    onChange={(e) => setDestino(e.target.value)}
-                    className="rounded-md border border-gray-300 px-2 py-1 text-xs"
-                  >
-                    {categorias
-                      .filter((x) => x.id !== c.id)
-                      .map((x) => (
-                        <option key={x.id} value={x.nombre}>
-                          {x.nombre}
-                        </option>
-                      ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => confirmarBorrado(c.id)}
-                    disabled={pendiente}
-                    className="rounded-md border border-red-500 bg-red-500 px-2 py-1 text-xs font-medium text-white disabled:opacity-60"
-                  >
-                    Borrar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBorrandoId(null)}
-                    className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600"
-                  >
-                    Cancelar
-                  </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">mover a</span>
+                    <select
+                      value={destino}
+                      onChange={(e) => setDestino(e.target.value)}
+                      className="min-w-[130px] flex-1 rounded-md border border-gray-300 px-2 py-1 text-xs sm:flex-none"
+                    >
+                      {categorias
+                        .filter((x) => x.id !== c.id)
+                        .map((x) => (
+                          <option key={x.id} value={x.nombre}>
+                            {x.nombre}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => confirmarBorrado(c.id)}
+                      disabled={pendiente}
+                      className="rounded-md border border-red-500 bg-red-500 px-2 py-1 text-xs font-medium text-white disabled:opacity-60"
+                    >
+                      Borrar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBorrandoId(null)}
+                      className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-600"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex shrink-0 items-center gap-2">

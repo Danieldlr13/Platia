@@ -134,7 +134,9 @@ export function Donut({ datos }: { datos: SegmentoDonut[] }) {
         </ResponsiveContainer>
       </div>
 
-      <ul className="space-y-1.5 sm:min-w-0 sm:flex-1">
+      {/* max-w: en tarjetas muy anchas (monitores ultra-wide) evita que el hueco
+          entre el nombre y el monto se vuelva absurdamente grande. */}
+      <ul className="space-y-1.5 sm:min-w-0 sm:max-w-sm sm:flex-1">
         {conDatos.map((d) => {
           const pct = total > 0 ? Math.round((d.monto / total) * 100) : 0;
           return (
