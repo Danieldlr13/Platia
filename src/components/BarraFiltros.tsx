@@ -6,6 +6,7 @@ interface Props {
   filtros: Filtros;
   meses: string[];
   comercios: string[];
+  categorias: string[];
   onChange: (f: Filtros) => void;
   onLimpiar: () => void;
 }
@@ -45,7 +46,14 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function BarraFiltros({ filtros, meses, comercios, onChange, onLimpiar }: Props) {
+export function BarraFiltros({
+  filtros,
+  meses,
+  comercios,
+  categorias,
+  onChange,
+  onLimpiar,
+}: Props) {
   const { periodo } = filtros;
 
   const periodoValue =
@@ -131,8 +139,11 @@ export function BarraFiltros({ filtros, meses, comercios, onChange, onLimpiar }:
             }
           >
             <option value="todas">Todas</option>
-            <option value="Transporte">Transporte</option>
-            <option value="Otros">Otros</option>
+            {categorias.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </Campo>
 

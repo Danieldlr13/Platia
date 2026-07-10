@@ -28,8 +28,8 @@ export function validarGasto(d: DatosGasto): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.fecha)) {
     return "La fecha no es válida.";
   }
-  if (d.categoria !== "Transporte" && d.categoria !== "Otros") {
-    return "Categoría no válida.";
+  if (!d.categoria || !d.categoria.trim()) {
+    return "Elige una categoría.";
   }
   if (d.metodo !== "Efectivo" && d.metodo !== "Tarjeta") {
     return "Método de pago no válido.";

@@ -6,6 +6,7 @@ import {
   filtrar,
   topComercios,
   porMetodoPago,
+  porCategoria,
   calcularKPIs,
   mesesDisponibles,
   comerciosDisponibles,
@@ -122,6 +123,22 @@ describe("topComercios", () => {
     const r = topComercios(txs, 2);
     expect(r).toHaveLength(3);
     expect(r[2]).toMatchObject({ comercio: "Otros comercios", monto: 2000, conteo: 1 });
+  });
+});
+
+describe("porCategoria", () => {
+  it("agrupa por categoría dinámica y ordena desc por monto", () => {
+    const txs = [
+      tx({ categoria: "Transporte", monto: 5000 }),
+      tx({ categoria: "Comida", monto: 12000 }),
+      tx({ categoria: "Transporte", monto: 3000 }),
+      tx({ categoria: "Otros", monto: 1000 }),
+    ];
+    expect(porCategoria(txs)).toEqual([
+      { categoria: "Comida", monto: 12000 },
+      { categoria: "Transporte", monto: 8000 },
+      { categoria: "Otros", monto: 1000 },
+    ]);
   });
 });
 

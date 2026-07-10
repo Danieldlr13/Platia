@@ -1,20 +1,23 @@
 "use client";
 
 import { Donut } from "./Donut";
+import { colorPorIndice } from "@/lib/colores";
 import type { GastoCategoria } from "@/lib/agregaciones";
 
-const COLOR: Record<string, string> = {
-  Transporte: "#00C389",
-  Otros: "#94A3B8",
-};
-
-export function GraficoCategoria({ datos }: { datos: GastoCategoria[] }) {
+export function GraficoCategoria({
+  datos,
+  colores,
+}: {
+  datos: GastoCategoria[];
+  /** Mapa nombre de categoría → color. */
+  colores: Record<string, string>;
+}) {
   return (
     <Donut
-      datos={datos.map((d) => ({
+      datos={datos.map((d, i) => ({
         nombre: d.categoria,
         monto: d.monto,
-        color: COLOR[d.categoria] ?? "#94A3B8",
+        color: colores[d.categoria] ?? colorPorIndice(i),
       }))}
     />
   );

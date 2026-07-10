@@ -46,6 +46,34 @@ export async function actualizarCategoria(
   }
 }
 
+/**
+ * Elimina una transacción (manual o automática). Útil cuando un cobro se
+ * duplica y el banco lo devuelve. RLS restringe a las filas propias. Como el
+ * ingestor solo procesa correos no leídos, un movimiento borrado no reaparece.
+ */
+export async function eliminarTransaccion(id: string): Promise<ResultadoAccion> {
+  if (!supabaseConfigurado()) return { ok: true }; // demo
+
+  try {
+    const supabase = await crearClienteServidor();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "Sin sesión" };
+
+    const { error } = await supabase
+      .from("transacciones")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
 /** Cierra la sesión y vuelve a /login. */
 export async function cerrarSesion(): Promise<void> {
   if (supabaseConfigurado()) {

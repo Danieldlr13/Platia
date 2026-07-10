@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { formatoCOP, metodoPago } from "@/lib/agregaciones";
 import type { TxUI } from "@/lib/demo-data";
 import type { Categoria } from "@/lib/types";
@@ -14,10 +15,28 @@ const FECHA_FMT = new Intl.DateTimeFormat("es-CO", {
 
 interface Props {
   txs: TxUI[];
+  categorias: string[];
   onCambiarCategoria: (id: string, categoria: Categoria) => void;
+  onEliminar: (id: string) => void;
 }
 
-export function ListaTransacciones({ txs, onCambiarCategoria }: Props) {
+export function ListaTransacciones({
+  txs,
+  categorias,
+  onCambiarCategoria,
+  onEliminar,
+}: Props) {
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+
+  function eliminar(id: string) {
+    if (confirmando !== id) {
+      setConfirmando(id);
+      return;
+    }
+    setConfirmando(null);
+    onEliminar(id);
+  }
+
   if (txs.length === 0) {
     return (
       <p className="p-6 text-sm text-gray-400">
@@ -36,6 +55,7 @@ export function ListaTransacciones({ txs, onCambiarCategoria }: Props) {
             <th className="hidden px-4 py-3 font-medium sm:table-cell">Método</th>
             <th className="hidden px-4 py-3 font-medium sm:table-cell">Categoría</th>
             <th className="px-3 py-3 text-right font-medium sm:px-4">Monto</th>
+            <th className="px-3 py-3 sm:px-4" />
           </tr>
         </thead>
         <tbody>
@@ -65,12 +85,34 @@ export function ListaTransacciones({ txs, onCambiarCategoria }: Props) {
                       : "border-gray-200 bg-gray-50 text-gray-600"
                   }`}
                 >
-                  <option value="Transporte">Transporte</option>
-                  <option value="Otros">Otros</option>
+                  {categorias.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                  {/* si la categoría actual ya no está en la lista, la incluimos */}
+                  {!categorias.includes(t.categoria) && (
+                    <option value={t.categoria}>{t.categoria}</option>
+                  )}
                 </select>
               </td>
               <td className="whitespace-nowrap px-3 py-3 text-right font-semibold text-gray-900 sm:px-4">
                 {formatoCOP(t.monto)}
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-right sm:px-4">
+                <button
+                  type="button"
+                  onClick={() => eliminar(t.id)}
+                  onBlur={() => confirmando === t.id && setConfirmando(null)}
+                  className={`rounded-md border px-2 py-1 text-xs font-medium ${
+                    confirmando === t.id
+                      ? "border-red-500 bg-red-500 text-white"
+                      : "border-gray-200 bg-white text-gray-400 hover:border-red-300 hover:text-red-600"
+                  }`}
+                  title="Eliminar movimiento"
+                >
+                  {confirmando === t.id ? "¿Borrar?" : "✕"}
+                </button>
               </td>
             </tr>
           ))}

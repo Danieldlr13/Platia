@@ -46,13 +46,22 @@ interface Props {
   onCerrar: () => void;
   /** Gastos manuales (subconjunto de las transacciones del panel), ya ordenados. */
   gastos: TxUI[];
+  /** Nombres de categorías disponibles para el dropdown. */
+  categorias: string[];
   /** Inserta o reemplaza una transacción en el estado del panel. */
   upsertTx: (tx: TxUI) => void;
   /** Elimina una transacción del estado del panel. */
   removeTx: (id: string) => void;
 }
 
-export function ModalGastos({ abierto, onCerrar, gastos, upsertTx, removeTx }: Props) {
+export function ModalGastos({
+  abierto,
+  onCerrar,
+  gastos,
+  categorias,
+  upsertTx,
+  removeTx,
+}: Props) {
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
   const [fecha, setFecha] = useState(hoy());
@@ -252,8 +261,11 @@ export function ModalGastos({ abierto, onCerrar, gastos, upsertTx, removeTx }: P
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value as Categoria)}
               >
-                <option value="Transporte">Transporte</option>
-                <option value="Otros">Otros</option>
+                {categorias.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </Campo>
             <Campo label="Método de pago">
