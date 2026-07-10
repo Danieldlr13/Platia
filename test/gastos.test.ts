@@ -29,8 +29,9 @@ describe("validarGasto", () => {
     expect(validarGasto({ ...base, fecha: "" })).toMatch(/fecha/i);
   });
 
-  it("rechaza categoría o método fuera de rango", () => {
-    expect(validarGasto({ ...base, categoria: "Comida" as never })).toMatch(/categoría/i);
+  it("acepta cualquier categoría no vacía; rechaza vacía y método inválido", () => {
+    expect(validarGasto({ ...base, categoria: "Comida" })).toBeNull();
+    expect(validarGasto({ ...base, categoria: "   " })).toMatch(/categoría/i);
     expect(validarGasto({ ...base, metodo: "Cripto" as never })).toMatch(/método/i);
   });
 });

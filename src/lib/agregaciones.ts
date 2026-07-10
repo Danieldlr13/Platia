@@ -169,13 +169,15 @@ export function calcularKPIs(txs: TxUI[]): KPIs {
   return { transporte, otros, total: transporte + otros, conteo: txs.length };
 }
 
-/** Gasto por categoría (Transporte/Otros) sobre un conjunto ya filtrado. */
+/** Gasto por categoría (todas las categorías presentes), ordenado desc por monto. */
 export function porCategoria(txs: TxUI[]): GastoCategoria[] {
-  const k = calcularKPIs(txs);
-  return [
-    { categoria: "Transporte", monto: k.transporte },
-    { categoria: "Otros", monto: k.otros },
-  ];
+  const mapa = new Map<string, number>();
+  for (const t of txs) {
+    mapa.set(t.categoria, (mapa.get(t.categoria) ?? 0) + t.monto);
+  }
+  return [...mapa.entries()]
+    .map(([categoria, monto]) => ({ categoria, monto }))
+    .sort((a, b) => b.monto - a.monto);
 }
 
 export interface ComercioAgrupado {

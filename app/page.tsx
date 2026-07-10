@@ -6,6 +6,13 @@ import { PanelInteractivo } from "@/components/PanelInteractivo";
 export const dynamic = "force-dynamic";
 
 export default async function Panel() {
-  const { txs, modo, email } = await obtenerTransacciones();
-  return <PanelInteractivo txsIniciales={txs} modo={modo} userEmail={email} />;
+  const { txs, categorias, modo, email } = await obtenerTransacciones();
+  return (
+    <PanelInteractivo
+      txsIniciales={txs}
+      categoriasIniciales={categorias}
+      modo={modo}
+      userEmail={email}
+    />
+  );
 }
