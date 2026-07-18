@@ -47,10 +47,38 @@ create table if not exists public.transacciones (
 create index if not exists idx_transacciones_user_fecha
   on public.transacciones (user_id, fecha desc);
 
+-- ───────────────────────── Patrimonio (balance general) ─────────────────────────
+-- Cuentas y "me deben" (cuentas por cobrar) que el usuario actualiza a mano.
+-- No se deriva de transacciones: es un snapshot independiente del gasto.
+create table if not exists public.patrimonio_cuentas (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  nombre      text not null,
+  tipo        text not null default 'cuenta' check (tipo in ('cuenta', 'por_cobrar')),
+  created_at  timestamptz not null default now()
+);
+
+-- Historial de saldos: cada actualización es un registro nuevo (nunca se
+-- sobreescribe), para poder graficar la tendencia del total en el tiempo.
+-- El saldo actual de una cuenta es su registro con mayor (fecha, created_at).
+create table if not exists public.patrimonio_saldos (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  cuenta_id   uuid not null references public.patrimonio_cuentas (id) on delete cascade,
+  saldo       numeric(14,2) not null,
+  fecha       date not null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_patrimonio_saldos_cuenta_fecha
+  on public.patrimonio_saldos (cuenta_id, fecha desc, created_at desc);
+
 -- ───────────────────────── Seguridad por fila (RLS) ─────────────────────────
-alter table public.categorias    enable row level security;
-alter table public.reglas        enable row level security;
-alter table public.transacciones enable row level security;
+alter table public.categorias         enable row level security;
+alter table public.reglas             enable row level security;
+alter table public.transacciones      enable row level security;
+alter table public.patrimonio_cuentas enable row level security;
+alter table public.patrimonio_saldos  enable row level security;
 
 -- Cada usuario solo ve y edita lo suyo.
 create policy "categorias propias" on public.categorias
@@ -60,4 +88,10 @@ create policy "reglas propias" on public.reglas
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "transacciones propias" on public.transacciones
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "patrimonio_cuentas propias" on public.patrimonio_cuentas
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "patrimonio_saldos propias" on public.patrimonio_saldos
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

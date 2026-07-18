@@ -26,6 +26,18 @@ import {
   editarCategoria,
   eliminarCategoria,
 } from "@/lib/categorias-acciones";
+import {
+  cuentasConSaldoActual,
+  calcularResumen,
+  calcularSerieTendencia,
+} from "@/lib/patrimonio-agregaciones";
+import {
+  crearCuenta,
+  actualizarSaldo,
+  editarNombreCuenta,
+  eliminarCuenta,
+} from "@/lib/patrimonio-acciones";
+import type { CuentaPatrimonio, SaldoRegistro } from "@/lib/patrimonio-tipos";
 import { BarraFiltros } from "./BarraFiltros";
 import { TarjetaKPI } from "./TarjetaKPI";
 import { GraficoCategoria } from "./GraficoCategoria";
@@ -35,6 +47,8 @@ import { GraficoMetodoPago } from "./GraficoMetodoPago";
 import { ListaTransacciones } from "./ListaTransacciones";
 import { ModalGastos } from "./ModalGastos";
 import { ModalCategorias } from "./ModalCategorias";
+import { BalanceGeneral } from "./BalanceGeneral";
+import { ModalCuentas } from "./ModalCuentas";
 
 function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -48,18 +62,25 @@ function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNo
 export function PanelInteractivo({
   txsIniciales,
   categoriasIniciales,
+  cuentasIniciales,
+  saldosIniciales,
   modo,
   userEmail,
 }: {
   txsIniciales: TxUI[];
   categoriasIniciales: CategoriaInfo[];
+  cuentasIniciales: CuentaPatrimonio[];
+  saldosIniciales: SaldoRegistro[];
   modo: "supabase" | "demo";
   userEmail?: string;
 }) {
   const [txs, setTxs] = useState(txsIniciales);
   const [categorias, setCategorias] = useState(categoriasIniciales);
+  const [cuentasPatrimonio, setCuentasPatrimonio] = useState(cuentasIniciales);
+  const [saldosPatrimonio, setSaldosPatrimonio] = useState(saldosIniciales);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalCategorias, setModalCategorias] = useState(false);
+  const [modalPatrimonio, setModalPatrimonio] = useState(false);
   const [, startTransition] = useTransition();
 
   const nombresCategorias = useMemo(
@@ -191,6 +212,59 @@ export function PanelInteractivo({
     return r;
   }
 
+  // ── Balance general (patrimonio): independiente del tracking de gastos ───────
+  const cuentasConSaldo = useMemo(
+    () => cuentasConSaldoActual(cuentasPatrimonio, saldosPatrimonio),
+    [cuentasPatrimonio, saldosPatrimonio],
+  );
+  const resumenPatrimonio = useMemo(
+    () => calcularResumen(cuentasConSaldo),
+    [cuentasConSaldo],
+  );
+  const serieTendencia = useMemo(
+    () => calcularSerieTendencia(cuentasPatrimonio, saldosPatrimonio),
+    [cuentasPatrimonio, saldosPatrimonio],
+  );
+
+  async function onCrearCuenta(d: Parameters<typeof crearCuenta>[0]) {
+    const r = await crearCuenta(d);
+    if (r.ok && r.cuenta && r.registro) {
+      setCuentasPatrimonio((prev) => [...prev, r.cuenta!]);
+      setSaldosPatrimonio((prev) => [...prev, r.registro!]);
+    }
+    return r;
+  }
+
+  async function onActualizarSaldoCuenta(
+    cuentaId: string,
+    d: Parameters<typeof actualizarSaldo>[1],
+  ) {
+    const r = await actualizarSaldo(cuentaId, d);
+    if (r.ok && r.registro) {
+      setSaldosPatrimonio((prev) => [...prev, r.registro!]);
+    }
+    return r;
+  }
+
+  async function onEditarNombreCuenta(cuentaId: string, nombre: string) {
+    const r = await editarNombreCuenta(cuentaId, nombre);
+    if (r.ok) {
+      setCuentasPatrimonio((prev) =>
+        prev.map((c) => (c.id === cuentaId ? { ...c, nombre } : c)),
+      );
+    }
+    return r;
+  }
+
+  async function onEliminarCuenta(cuentaId: string) {
+    const r = await eliminarCuenta(cuentaId);
+    if (r.ok) {
+      setCuentasPatrimonio((prev) => prev.filter((c) => c.id !== cuentaId));
+      setSaldosPatrimonio((prev) => prev.filter((s) => s.cuentaId !== cuentaId));
+    }
+    return r;
+  }
+
   const gastosManuales = useMemo(
     () =>
       txs
@@ -256,6 +330,12 @@ export function PanelInteractivo({
           )}
         </div>
       </header>
+
+      <BalanceGeneral
+        resumen={resumenPatrimonio}
+        serie={serieTendencia}
+        onGestionar={() => setModalPatrimonio(true)}
+      />
 
       <BarraFiltros
         filtros={filtros}
@@ -346,6 +426,16 @@ export function PanelInteractivo({
         onCrear={onCrearCategoria}
         onEditar={onEditarCategoria}
         onEliminar={onEliminarCategoria}
+      />
+
+      <ModalCuentas
+        abierto={modalPatrimonio}
+        onCerrar={() => setModalPatrimonio(false)}
+        cuentas={cuentasConSaldo}
+        onCrear={onCrearCuenta}
+        onActualizarSaldo={onActualizarSaldoCuenta}
+        onEditarNombre={onEditarNombreCuenta}
+        onEliminar={onEliminarCuenta}
       />
     </main>
   );
