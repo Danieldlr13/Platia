@@ -1,4 +1,5 @@
 import { obtenerTransacciones } from "@/lib/datos";
+import { obtenerPatrimonio } from "@/lib/patrimonio-datos";
 import { PanelInteractivo } from "@/components/PanelInteractivo";
 
 // Se renderiza en cada petición para reflejar siempre los datos actuales del
@@ -6,11 +7,16 @@ import { PanelInteractivo } from "@/components/PanelInteractivo";
 export const dynamic = "force-dynamic";
 
 export default async function Panel() {
-  const { txs, categorias, modo, email } = await obtenerTransacciones();
+  const [{ txs, categorias, modo, email }, patrimonio] = await Promise.all([
+    obtenerTransacciones(),
+    obtenerPatrimonio(),
+  ]);
   return (
     <PanelInteractivo
       txsIniciales={txs}
       categoriasIniciales={categorias}
+      cuentasIniciales={patrimonio.cuentas}
+      saldosIniciales={patrimonio.saldos}
       modo={modo}
       userEmail={email}
     />

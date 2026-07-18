@@ -68,5 +68,7 @@ Ver `.env.example` para la lista completa de variables.
 - ✅ Panel con filtros, agrupaciones y gráficos (responsive)
 - ✅ Ingestor IMAP + esquema Supabase + cron
 - ✅ Login con Supabase Auth + RLS (web multi-cliente) y edición de categoría persistente
-- ✅ Guía de implementación in-app (`/guia`) y diagramas de arquitectura
-- ⏳ Pendiente: ruteo correo→usuario en el ingestor (datos multi-tenant automáticos), deploy en Vercel
+- ✅ Categorías dinámicas (CRUD) y eliminar movimientos
+- ✅ Balance general: cuentas y "me deben" con historial y tendencia (independiente del gasto)
+- ✅ Guía de implementación in-app (`/guia`), diagramas de arquitectura y despliegue en Vercel
+- ⏳ Pendiente: ruteo correo→usuario en el ingestor (datos multi-tenant automáticos)
