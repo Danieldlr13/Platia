@@ -9,9 +9,10 @@ import { supabaseConfigurado } from "./supabase";
 import {
   validarCuenta,
   validarSaldo,
-  validarNombre,
+  validarEdicionCuenta,
   type DatosCuenta,
   type DatosSaldo,
+  type DatosEdicionCuenta,
   type CuentaPatrimonio,
   type SaldoRegistro,
 } from "./patrimonio-tipos";
@@ -126,12 +127,64 @@ export async function actualizarSaldo(
   };
 }
 
-export async function editarNombreCuenta(
-  cuentaId: string,
-  nombre: string,
+/** Corrige un registro del historial en vez de agregar uno nuevo (p. ej. un typo). */
+export async function editarSaldoRegistro(
+  saldoId: string,
+  d: DatosSaldo,
+): Promise<ResultadoSaldo> {
+  if (!supabaseConfigurado()) return { ok: true }; // demo
+  const err = validarSaldo(d);
+  if (err) return { ok: false, error: err };
+
+  const { supabase, user } = await sesion();
+  if (!user) return { ok: false, error: "Sin sesión" };
+
+  const { data, error } = await supabase
+    .from("patrimonio_saldos")
+    .update({ saldo: d.saldo, fecha: d.fecha })
+    .eq("id", saldoId)
+    .eq("user_id", user.id)
+    .select("id, cuenta_id, saldo, fecha, created_at")
+    .single();
+
+  if (error || !data) return { ok: false, error: error?.message ?? "No se pudo guardar." };
+
+  return {
+    ok: true,
+    registro: {
+      id: String(data.id),
+      cuentaId: String(data.cuenta_id),
+      saldo: Number(data.saldo),
+      fecha: String(data.fecha),
+      creadoEn: String(data.created_at),
+    },
+  };
+}
+
+export async function eliminarSaldoRegistro(
+  saldoId: string,
 ): Promise<ResultadoAccion> {
   if (!supabaseConfigurado()) return { ok: true }; // demo
-  const err = validarNombre(nombre);
+
+  const { supabase, user } = await sesion();
+  if (!user) return { ok: false, error: "Sin sesión" };
+
+  const { error } = await supabase
+    .from("patrimonio_saldos")
+    .delete()
+    .eq("id", saldoId)
+    .eq("user_id", user.id);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function editarCuenta(
+  cuentaId: string,
+  d: DatosEdicionCuenta,
+): Promise<ResultadoAccion> {
+  if (!supabaseConfigurado()) return { ok: true }; // demo
+  const err = validarEdicionCuenta(d);
   if (err) return { ok: false, error: err };
 
   const { supabase, user } = await sesion();
@@ -139,7 +192,7 @@ export async function editarNombreCuenta(
 
   const { error } = await supabase
     .from("patrimonio_cuentas")
-    .update({ nombre: nombre.trim() })
+    .update({ nombre: d.nombre.trim(), tipo: d.tipo })
     .eq("id", cuentaId)
     .eq("user_id", user.id);
 
