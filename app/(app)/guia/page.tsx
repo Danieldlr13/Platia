@@ -127,12 +127,8 @@ function FilaValor({ v }: { v: Valor }) {
 
 export default function GuiaPage() {
   return (
-    <main className="mx-auto max-w-3xl px-3 py-8 sm:px-4">
-      <a href="/" className="text-sm text-banco-verde hover:underline">
-        ← Volver al panel
-      </a>
-
-      <header className="mt-4 mb-8">
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           Implementación paso a paso
         </h1>
@@ -171,6 +167,6 @@ export default function GuiaPage() {
       <footer className="mt-8 text-center text-xs text-gray-400">
         Platia · guía de implementación
       </footer>
-    </main>
+    </div>
   );
 }

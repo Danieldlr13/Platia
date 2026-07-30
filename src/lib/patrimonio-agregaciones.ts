@@ -19,6 +19,17 @@ function historialPorCuenta(saldos: SaldoRegistro[]): Map<string, SaldoRegistro[
   return mapa;
 }
 
+/**
+ * Historial de una cuenta, del más reciente al más antiguo — el orden en que
+ * se muestra al editar registros pasados.
+ */
+export function historialDeCuenta(
+  cuentaId: string,
+  saldos: SaldoRegistro[],
+): SaldoRegistro[] {
+  return (historialPorCuenta(saldos).get(cuentaId) ?? []).slice().reverse();
+}
+
 export interface CuentaConSaldo extends CuentaPatrimonio {
   saldoActual: number;
   /** Fecha del último registro, o null si la cuenta nunca se ha actualizado. */

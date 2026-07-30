@@ -26,7 +26,7 @@ Bancolombia → correo del cliente → [filtro Gmail reenvía] → buzón dedica
 | `src/lib/agregaciones.ts` | Totales por mes y categoría para el panel |
 | `src/ingest/ingest.ts` | Lee el buzón por IMAP y guarda en Supabase |
 | `db/schema.sql` · `db/seed.sql` | Base de datos y datos iniciales |
-| `app/` · `src/components/` | Panel web (Next.js + Recharts) |
+| `app/(app)/` · `src/components/` | Panel web con sidebar: Gastos, Balance, Categorías, Guía |
 | `.github/workflows/ingest.yml` | Cron de ingesta cada 15 min |
 | `middleware.ts` · `app/login/` | Login (Supabase Auth) y protección de rutas |
 | `app/guia/` | Guía de implementación paso a paso (in-app) |
@@ -69,6 +69,7 @@ Ver `.env.example` para la lista completa de variables.
 - ✅ Ingestor IMAP + esquema Supabase + cron
 - ✅ Login con Supabase Auth + RLS (web multi-cliente) y edición de categoría persistente
 - ✅ Categorías dinámicas (CRUD) y eliminar movimientos
-- ✅ Balance general: cuentas y "me deben" con historial y tendencia (independiente del gasto)
+- ✅ Balance general: cuentas y "me deben" con historial editable registro a registro
+- ✅ Navegación por secciones con sidebar (cajón deslizante en móvil)
 - ✅ Guía de implementación in-app (`/guia`), diagramas de arquitectura y despliegue en Vercel
 - ⏳ Pendiente: ruteo correo→usuario en el ingestor (datos multi-tenant automáticos)

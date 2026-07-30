@@ -16,28 +16,7 @@ import {
 } from "@/lib/agregaciones";
 import type { TxUI } from "@/lib/demo-data";
 import type { Categoria, CategoriaInfo } from "@/lib/types";
-import {
-  actualizarCategoria,
-  eliminarTransaccion,
-  cerrarSesion,
-} from "@/lib/acciones";
-import {
-  crearCategoria,
-  editarCategoria,
-  eliminarCategoria,
-} from "@/lib/categorias-acciones";
-import {
-  cuentasConSaldoActual,
-  calcularResumen,
-  calcularSerieTendencia,
-} from "@/lib/patrimonio-agregaciones";
-import {
-  crearCuenta,
-  actualizarSaldo,
-  editarNombreCuenta,
-  eliminarCuenta,
-} from "@/lib/patrimonio-acciones";
-import type { CuentaPatrimonio, SaldoRegistro } from "@/lib/patrimonio-tipos";
+import { actualizarCategoria, eliminarTransaccion } from "@/lib/acciones";
 import { BarraFiltros } from "./BarraFiltros";
 import { TarjetaKPI } from "./TarjetaKPI";
 import { GraficoCategoria } from "./GraficoCategoria";
@@ -46,9 +25,6 @@ import { GraficoTopComercios } from "./GraficoTopComercios";
 import { GraficoMetodoPago } from "./GraficoMetodoPago";
 import { ListaTransacciones } from "./ListaTransacciones";
 import { ModalGastos } from "./ModalGastos";
-import { ModalCategorias } from "./ModalCategorias";
-import { BalanceGeneral } from "./BalanceGeneral";
-import { ModalCuentas } from "./ModalCuentas";
 
 function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -62,27 +38,17 @@ function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNo
 export function PanelInteractivo({
   txsIniciales,
   categoriasIniciales,
-  cuentasIniciales,
-  saldosIniciales,
-  modo,
-  userEmail,
 }: {
   txsIniciales: TxUI[];
   categoriasIniciales: CategoriaInfo[];
-  cuentasIniciales: CuentaPatrimonio[];
-  saldosIniciales: SaldoRegistro[];
-  modo: "supabase" | "demo";
-  userEmail?: string;
 }) {
   const [txs, setTxs] = useState(txsIniciales);
-  const [categorias, setCategorias] = useState(categoriasIniciales);
-  const [cuentasPatrimonio, setCuentasPatrimonio] = useState(cuentasIniciales);
-  const [saldosPatrimonio, setSaldosPatrimonio] = useState(saldosIniciales);
   const [modalAbierto, setModalAbierto] = useState(false);
-  const [modalCategorias, setModalCategorias] = useState(false);
-  const [modalPatrimonio, setModalPatrimonio] = useState(false);
   const [, startTransition] = useTransition();
 
+  // Las categorías se administran en /categorias; aquí solo se leen (filtros,
+  // colores del donut y el selector de cada movimiento).
+  const categorias = categoriasIniciales;
   const nombresCategorias = useMemo(
     () => categorias.map((c) => c.nombre),
     [categorias],
@@ -162,109 +128,6 @@ export function PanelInteractivo({
     });
   }
 
-  // ── CRUD de categorías: actualiza el estado local tras la server action ──────
-  async function onCrearCategoria(nombre: string, color: string) {
-    const r = await crearCategoria(nombre, color);
-    if (r.ok) {
-      const nueva: CategoriaInfo = r.categoria ?? { id: `local-${nombre}`, nombre, color };
-      setCategorias((prev) => [...prev, nueva]);
-    }
-    return r;
-  }
-
-  async function onEditarCategoria(id: string, nombre: string, color: string) {
-    const anterior = categorias.find((c) => c.id === id);
-    const r = await editarCategoria(id, nombre, color);
-    if (r.ok && anterior) {
-      setCategorias((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, nombre, color } : c)),
-      );
-      if (nombre !== anterior.nombre) {
-        // el nombre de la categoría cambió: refleja en gastos y en el filtro
-        setTxs((prev) =>
-          prev.map((t) =>
-            t.categoria === anterior.nombre ? { ...t, categoria: nombre } : t,
-          ),
-        );
-        setFiltros((f) =>
-          f.categoria === anterior.nombre ? { ...f, categoria: nombre } : f,
-        );
-      }
-    }
-    return r;
-  }
-
-  async function onEliminarCategoria(id: string, destinoNombre: string) {
-    const borrada = categorias.find((c) => c.id === id);
-    const r = await eliminarCategoria(id, destinoNombre);
-    if (r.ok && borrada) {
-      setCategorias((prev) => prev.filter((c) => c.id !== id));
-      // los gastos de la categoría borrada pasan al destino
-      setTxs((prev) =>
-        prev.map((t) =>
-          t.categoria === borrada.nombre ? { ...t, categoria: destinoNombre } : t,
-        ),
-      );
-      setFiltros((f) =>
-        f.categoria === borrada.nombre ? { ...f, categoria: "todas" } : f,
-      );
-    }
-    return r;
-  }
-
-  // ── Balance general (patrimonio): independiente del tracking de gastos ───────
-  const cuentasConSaldo = useMemo(
-    () => cuentasConSaldoActual(cuentasPatrimonio, saldosPatrimonio),
-    [cuentasPatrimonio, saldosPatrimonio],
-  );
-  const resumenPatrimonio = useMemo(
-    () => calcularResumen(cuentasConSaldo),
-    [cuentasConSaldo],
-  );
-  const serieTendencia = useMemo(
-    () => calcularSerieTendencia(cuentasPatrimonio, saldosPatrimonio),
-    [cuentasPatrimonio, saldosPatrimonio],
-  );
-
-  async function onCrearCuenta(d: Parameters<typeof crearCuenta>[0]) {
-    const r = await crearCuenta(d);
-    if (r.ok && r.cuenta && r.registro) {
-      setCuentasPatrimonio((prev) => [...prev, r.cuenta!]);
-      setSaldosPatrimonio((prev) => [...prev, r.registro!]);
-    }
-    return r;
-  }
-
-  async function onActualizarSaldoCuenta(
-    cuentaId: string,
-    d: Parameters<typeof actualizarSaldo>[1],
-  ) {
-    const r = await actualizarSaldo(cuentaId, d);
-    if (r.ok && r.registro) {
-      setSaldosPatrimonio((prev) => [...prev, r.registro!]);
-    }
-    return r;
-  }
-
-  async function onEditarNombreCuenta(cuentaId: string, nombre: string) {
-    const r = await editarNombreCuenta(cuentaId, nombre);
-    if (r.ok) {
-      setCuentasPatrimonio((prev) =>
-        prev.map((c) => (c.id === cuentaId ? { ...c, nombre } : c)),
-      );
-    }
-    return r;
-  }
-
-  async function onEliminarCuenta(cuentaId: string) {
-    const r = await eliminarCuenta(cuentaId);
-    if (r.ok) {
-      setCuentasPatrimonio((prev) => prev.filter((c) => c.id !== cuentaId));
-      setSaldosPatrimonio((prev) => prev.filter((s) => s.cuentaId !== cuentaId));
-    }
-    return r;
-  }
-
   const gastosManuales = useMemo(
     () =>
       txs
@@ -281,7 +144,7 @@ export function PanelInteractivo({
         : "todo el histórico";
 
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
@@ -289,53 +152,14 @@ export function PanelInteractivo({
           </h1>
           <p className="text-sm text-gray-500">Mostrando {subtitulo}</p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          {modo === "demo" && (
-            <span className="rounded-full bg-banco-amarillo/30 px-3 py-1 text-xs font-medium text-banco-oscuro">
-              Datos de demostración
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => setModalAbierto(true)}
-            className="rounded-lg bg-banco-verde px-3 py-1.5 text-sm font-medium text-white hover:brightness-95"
-          >
-            + Gasto
-          </button>
-          <button
-            type="button"
-            onClick={() => setModalCategorias(true)}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Categorías
-          </button>
-          <a
-            href="/guia"
-            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-          >
-            Guía
-          </a>
-          {userEmail && (
-            <form action={cerrarSesion} className="flex items-center gap-2">
-              <span className="hidden text-xs text-gray-500 sm:inline">
-                {userEmail}
-              </span>
-              <button
-                type="submit"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
-              >
-                Salir
-              </button>
-            </form>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setModalAbierto(true)}
+          className="rounded-lg bg-banco-verde px-3 py-1.5 text-sm font-medium text-white hover:brightness-95"
+        >
+          + Gasto
+        </button>
       </header>
-
-      <BalanceGeneral
-        resumen={resumenPatrimonio}
-        serie={serieTendencia}
-        onGestionar={() => setModalPatrimonio(true)}
-      />
 
       <BarraFiltros
         filtros={filtros}
@@ -375,7 +199,9 @@ export function PanelInteractivo({
       {/* Gráficos — items-start: cada tarjeta toma su alto natural (si no, la
           tarjeta más corta se estira para igualar a su vecina más alta y deja
           un hueco vacío, p. ej. Tendencia vs. Top comercios con muchas filas). */}
-      <section className="mb-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      {/* 2 columnas desde xl (no lg): con el sidebar ocupando 256px, a 1024px
+          cada tarjeta quedaría tan angosta que el donut y su leyenda se salen. */}
+      <section className="mb-6 grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
         <Tarjeta titulo="Gasto por categoría">
           <GraficoCategoria datos={datosCategoria} colores={coloresCategorias} />
         </Tarjeta>
@@ -418,25 +244,6 @@ export function PanelInteractivo({
         upsertTx={upsertTx}
         removeTx={removeTx}
       />
-
-      <ModalCategorias
-        abierto={modalCategorias}
-        onCerrar={() => setModalCategorias(false)}
-        categorias={categorias}
-        onCrear={onCrearCategoria}
-        onEditar={onEditarCategoria}
-        onEliminar={onEliminarCategoria}
-      />
-
-      <ModalCuentas
-        abierto={modalPatrimonio}
-        onCerrar={() => setModalPatrimonio(false)}
-        cuentas={cuentasConSaldo}
-        onCrear={onCrearCuenta}
-        onActualizarSaldo={onActualizarSaldoCuenta}
-        onEditarNombre={onEditarNombreCuenta}
-        onEliminar={onEliminarCuenta}
-      />
-    </main>
+    </div>
   );
 }

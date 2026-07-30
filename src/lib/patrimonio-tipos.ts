@@ -31,6 +31,12 @@ export interface DatosSaldo {
   fecha: string; // "YYYY-MM-DD"
 }
 
+/** Lo que se puede cambiar de una cuenta ya creada (su saldo va aparte). */
+export interface DatosEdicionCuenta {
+  nombre: string;
+  tipo: TipoCuenta;
+}
+
 /** Devuelve un mensaje de error si los datos no son válidos, o null si están bien. */
 export function validarCuenta(d: DatosCuenta): string | null {
   if (!d.nombre || !d.nombre.trim()) {
@@ -56,5 +62,12 @@ export function validarSaldo(d: DatosSaldo): string | null {
 
 export function validarNombre(nombre: string): string | null {
   if (!nombre || !nombre.trim()) return "El nombre es obligatorio.";
+  return null;
+}
+
+export function validarEdicionCuenta(d: DatosEdicionCuenta): string | null {
+  const errNombre = validarNombre(d.nombre);
+  if (errNombre) return errNombre;
+  if (d.tipo !== "cuenta" && d.tipo !== "por_cobrar") return "Tipo no válido.";
   return null;
 }

@@ -4,8 +4,15 @@ import {
   calcularResumen,
   calcularSerieTendencia,
   agruparPorTipo,
+  historialDeCuenta,
 } from "../src/lib/patrimonio-agregaciones";
-import { validarCuenta, validarSaldo, validarNombre } from "../src/lib/patrimonio-tipos";
+import {
+  validarCuenta,
+  validarSaldo,
+  validarNombre,
+  validarEdicionCuenta,
+} from "../src/lib/patrimonio-tipos";
+import { formatearMiles, parsearMiles } from "../src/lib/formato-numero";
 import type { CuentaPatrimonio, SaldoRegistro } from "../src/lib/patrimonio-tipos";
 
 function cuenta(over: Partial<CuentaPatrimonio>): CuentaPatrimonio {
@@ -146,5 +153,76 @@ describe("validarCuenta / validarSaldo / validarNombre", () => {
   it("rechaza saldo no numérico y fecha inválida", () => {
     expect(validarSaldo({ saldo: NaN, fecha: "2026-06-01" })).toMatch(/saldo/i);
     expect(validarSaldo({ saldo: 100, fecha: "01/06/2026" })).toMatch(/fecha/i);
+  });
+});
+
+describe("historialDeCuenta", () => {
+  it("devuelve los registros del más reciente al más antiguo", () => {
+    const saldos = [
+      saldo({ id: "s1", cuentaId: "c1", fecha: "2026-06-01" }),
+      saldo({ id: "s3", cuentaId: "c1", fecha: "2026-06-20" }),
+      saldo({ id: "s2", cuentaId: "c1", fecha: "2026-06-10" }),
+    ];
+    expect(historialDeCuenta("c1", saldos).map((s) => s.id)).toEqual([
+      "s3",
+      "s2",
+      "s1",
+    ]);
+  });
+
+  it("solo incluye los registros de esa cuenta", () => {
+    const saldos = [
+      saldo({ id: "s1", cuentaId: "c1" }),
+      saldo({ id: "s2", cuentaId: "c2" }),
+    ];
+    expect(historialDeCuenta("c2", saldos).map((s) => s.id)).toEqual(["s2"]);
+  });
+
+  it("el mismo día desempata por creadoEn, el último primero", () => {
+    const saldos = [
+      saldo({ id: "s1", fecha: "2026-06-01", creadoEn: "2026-06-01T08:00:00Z" }),
+      saldo({ id: "s2", fecha: "2026-06-01", creadoEn: "2026-06-01T20:00:00Z" }),
+    ];
+    expect(historialDeCuenta("c1", saldos).map((s) => s.id)).toEqual(["s2", "s1"]);
+  });
+
+  it("una cuenta sin registros da lista vacía", () => {
+    expect(historialDeCuenta("c9", [saldo({ cuentaId: "c1" })])).toEqual([]);
+  });
+});
+
+describe("validarEdicionCuenta", () => {
+  it("acepta cambiar nombre y tipo", () => {
+    expect(validarEdicionCuenta({ nombre: "Juan", tipo: "por_cobrar" })).toBeNull();
+  });
+
+  it("rechaza nombre vacío y tipo inválido", () => {
+    expect(validarEdicionCuenta({ nombre: " ", tipo: "cuenta" })).toMatch(/nombre/i);
+    expect(
+      validarEdicionCuenta({ nombre: "Juan", tipo: "otro" as never }),
+    ).toMatch(/tipo/i);
+  });
+});
+
+describe("formatearMiles / parsearMiles", () => {
+  it("agrupa de a tres mientras se escribe", () => {
+    expect(formatearMiles("1250000")).toBe("1.250.000");
+    expect(formatearMiles("1.250.000")).toBe("1.250.000");
+    expect(formatearMiles("0")).toBe("0");
+  });
+
+  it("conserva el signo negativo (deudas)", () => {
+    expect(formatearMiles("-45000")).toBe("-45.000");
+    expect(parsearMiles("-45.000")).toBe(-45000);
+  });
+
+  it("un campo vacío no es un número", () => {
+    expect(formatearMiles("")).toBe("");
+    expect(parsearMiles("")).toBeNaN();
+    expect(parsearMiles("abc")).toBeNaN();
+  });
+
+  it("ida y vuelta preserva el valor", () => {
+    expect(parsearMiles(formatearMiles("3170500"))).toBe(3170500);
   });
 });
