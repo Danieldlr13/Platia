@@ -134,6 +134,7 @@ export function PanelInteractivo({
                 categoria: d.categoria,
                 fecha: instanteBogota(d.fecha, d.hora),
                 tarjeta: d.metodo ?? t.tarjeta,
+                editado: true,
               }
             : t,
         ),
