@@ -39,10 +39,17 @@ create table if not exists public.transacciones (
   tipo              text,
   raw_texto         text,
   email_message_id  text not null,
+  -- true si el usuario corrigió a mano lo que llegó del banco.
+  editado           boolean not null default false,
   created_at        timestamptz not null default now(),
   -- Evita duplicados: un mismo correo (Message-ID) no se guarda dos veces.
   unique (user_id, email_message_id)
 );
+
+-- Para bases creadas antes de que existiera la columna (create table if not
+-- exists no altera una tabla que ya está).
+alter table public.transacciones
+  add column if not exists editado boolean not null default false;
 
 create index if not exists idx_transacciones_user_fecha
   on public.transacciones (user_id, fecha desc);

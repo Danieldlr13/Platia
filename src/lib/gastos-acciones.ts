@@ -6,6 +6,7 @@
 
 import { crearClienteServidor } from "./supabase-server";
 import { obtenerCategorias } from "./categorias";
+import { columnaFaltante } from "./datos";
 import { supabaseConfigurado } from "./supabase";
 import {
   validarGasto,
@@ -139,16 +140,22 @@ export async function editarMovimiento(
     comercio: d.comercio.trim(),
     categoria_id: categorias.get(d.categoria) ?? null,
     categoria_manual: true, // la decisión del usuario manda sobre el clasificador
+    editado: true, // deja de coincidir con lo que mandó el banco
   };
   // Solo los manuales guardan el método en `tarjeta`; en los del banco esa
   // columna es el número de tarjeta y no se toca.
   if (d.metodo) cambios.tarjeta = d.metodo;
 
-  const { error } = await supabase
-    .from("transacciones")
-    .update(cambios)
-    .eq("id", id)
-    .eq("user_id", user.id);
+  const guardar = (c: Record<string, unknown>) =>
+    supabase.from("transacciones").update(c).eq("id", id).eq("user_id", user.id);
+
+  let { error } = await guardar(cambios);
+  // Si la migración de `editado` aún no se corrió, se guarda sin esa marca en
+  // vez de fallar. Ver db/migracion-editado.sql.
+  if (columnaFaltante(error)) {
+    const { editado: _omitida, ...resto } = cambios;
+    ({ error } = await guardar(resto));
+  }
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };

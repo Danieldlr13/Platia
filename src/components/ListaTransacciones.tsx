@@ -26,6 +26,14 @@ const FECHA_FMT = new Intl.DateTimeFormat("es-CO", {
   timeZone: "America/Bogota",
 });
 
+// En móvil no cabe la fecha con hora: la tabla obligaba a desplazarse de lado
+// para alcanzar los botones de la última columna.
+const FECHA_CORTA = new Intl.DateTimeFormat("es-CO", {
+  day: "2-digit",
+  month: "short",
+  timeZone: "America/Bogota",
+});
+
 type Res = { ok: boolean; error?: string };
 
 interface Props {
@@ -126,7 +134,7 @@ export function ListaTransacciones({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-400">
-              <th className="px-3 py-3 font-medium sm:px-4">Fecha</th>
+              <th className="hidden px-4 py-3 font-medium sm:table-cell">Fecha</th>
               <th className="px-3 py-3 font-medium sm:px-4">Comercio</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Método</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Categoría</th>
@@ -243,13 +251,31 @@ export function ListaTransacciones({
                 </tr>
               ) : (
               <tr key={t.id} className="border-b border-gray-100 last:border-0">
-                <td className="whitespace-nowrap px-3 py-3 text-gray-500 sm:px-4">
+                <td className="hidden whitespace-nowrap px-4 py-3 text-gray-500 sm:table-cell">
                   {FECHA_FMT.format(new Date(t.fecha))}
                 </td>
-                <td className="px-3 py-3 sm:px-4">
-                  <span className="font-medium text-gray-800">{t.comercio}</span>
-                  <span className="ml-2 hidden text-xs text-gray-400 sm:inline">
-                    {t.tarjeta}
+                {/* w-full + max-w-0: la celda absorbe el ancho sobrante y el
+                    nombre se recorta solo, sin anchos fijos por breakpoint. */}
+                <td className="w-full max-w-0 px-3 py-3 sm:px-4">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium text-gray-800">
+                      {t.comercio}
+                    </span>
+                    {t.editado && !t.esManual && (
+                      <span
+                        className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-400"
+                        title="Corregido a mano: ya no coincide con lo que mandó el banco"
+                      >
+                        editado
+                      </span>
+                    )}
+                    <span className="hidden shrink-0 text-xs text-gray-400 sm:inline">
+                      {t.tarjeta}
+                    </span>
+                  </div>
+                  {/* En móvil la columna Fecha está oculta: va aquí debajo. */}
+                  <span className="text-xs text-gray-400 sm:hidden">
+                    {FECHA_CORTA.format(new Date(t.fecha))}
                   </span>
                 </td>
                 <td className="hidden px-4 py-3 text-gray-500 sm:table-cell">

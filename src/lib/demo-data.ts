@@ -14,6 +14,8 @@ export interface TxUI {
   tipo: string;
   /** true si es un gasto anotado a mano (no vino por la automatización). */
   esManual?: boolean;
+  /** true si el usuario corrigió a mano lo que llegó del banco. */
+  editado?: boolean;
 }
 
 interface Semilla {
