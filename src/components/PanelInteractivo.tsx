@@ -17,6 +17,8 @@ import {
 import type { TxUI } from "@/lib/demo-data";
 import type { Categoria, CategoriaInfo } from "@/lib/types";
 import { actualizarCategoria, eliminarTransaccion } from "@/lib/acciones";
+import { editarMovimiento } from "@/lib/gastos-acciones";
+import { instanteBogota, type DatosMovimiento } from "@/lib/gastos-tipos";
 import { BarraFiltros } from "./BarraFiltros";
 import { TarjetaKPI } from "./TarjetaKPI";
 import { GraficoCategoria } from "./GraficoCategoria";
@@ -116,6 +118,28 @@ export function PanelInteractivo({
   }
   function removeTx(id: string) {
     setTxs((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  // Edita un movimiento completo (venga del banco o anotado a mano).
+  async function onEditarMovimiento(id: string, d: DatosMovimiento) {
+    const r = await editarMovimiento(id, d);
+    if (r.ok) {
+      setTxs((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                comercio: d.comercio.trim(),
+                monto: d.monto,
+                categoria: d.categoria,
+                fecha: instanteBogota(d.fecha, d.hora),
+                tarjeta: d.metodo ?? t.tarjeta,
+              }
+            : t,
+        ),
+      );
+    }
+    return r;
   }
 
   // Elimina un movimiento (p. ej. un cobro duplicado): optimista + revert.
@@ -229,6 +253,7 @@ export function PanelInteractivo({
           categorias={nombresCategorias}
           onCambiarCategoria={cambiarCategoria}
           onEliminar={eliminarTx}
+          onEditar={onEditarMovimiento}
         />
       </section>
 
