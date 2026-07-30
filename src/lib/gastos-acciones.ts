@@ -7,7 +7,14 @@
 import { crearClienteServidor } from "./supabase-server";
 import { obtenerCategorias } from "./categorias";
 import { supabaseConfigurado } from "./supabase";
-import { validarGasto, MARCA_MANUAL, type DatosGasto } from "./gastos-tipos";
+import {
+  validarGasto,
+  validarMovimiento,
+  instanteBogota,
+  MARCA_MANUAL,
+  type DatosGasto,
+  type DatosMovimiento,
+} from "./gastos-tipos";
 import type { TxUI } from "./demo-data";
 
 export interface ResultadoAccion {
@@ -103,6 +110,45 @@ export async function actualizarGasto(
     })
     .eq("id", id)
     .like("email_message_id", `${MARCA_MANUAL}%`); // solo gastos manuales
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * Edita cualquier movimiento del usuario, venga del banco o anotado a mano.
+ * A diferencia de `actualizarGasto`, no se limita a las filas manuales: el
+ * parser a veces saca mal el comercio o el monto y hay que poder corregirlo.
+ * El ingestor no lo pisa (solo procesa correos no leídos y no reinserta).
+ */
+export async function editarMovimiento(
+  id: string,
+  d: DatosMovimiento,
+): Promise<ResultadoAccion> {
+  if (!supabaseConfigurado()) return { ok: true }; // demo
+  const err = validarMovimiento(d);
+  if (err) return { ok: false, error: err };
+
+  const { supabase, user } = await sesion();
+  if (!user) return { ok: false, error: "Sin sesión" };
+
+  const categorias = await obtenerCategorias(supabase, user.id);
+  const cambios: Record<string, unknown> = {
+    fecha: instanteBogota(d.fecha, d.hora),
+    monto: d.monto,
+    comercio: d.comercio.trim(),
+    categoria_id: categorias.get(d.categoria) ?? null,
+    categoria_manual: true, // la decisión del usuario manda sobre el clasificador
+  };
+  // Solo los manuales guardan el método en `tarjeta`; en los del banco esa
+  // columna es el número de tarjeta y no se toca.
+  if (d.metodo) cambios.tarjeta = d.metodo;
+
+  const { error } = await supabase
+    .from("transacciones")
+    .update(cambios)
+    .eq("id", id)
+    .eq("user_id", user.id);
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
