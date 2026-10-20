@@ -34,7 +34,7 @@
     "imapflow": "^1.0.181",
     "mailparser": "^3.7.2",
     "postcss": "^8.5.1",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
