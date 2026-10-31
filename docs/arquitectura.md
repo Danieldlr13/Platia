@@ -1,4 +1,4 @@
-# Arquitectura de CUENTAS
+# Arquitectura de Platia
 
 Documentación técnica del sistema: cómo un correo de Bancolombia termina como un
 gráfico en el panel, y cómo encajan la ingesta, la base de datos y la web.

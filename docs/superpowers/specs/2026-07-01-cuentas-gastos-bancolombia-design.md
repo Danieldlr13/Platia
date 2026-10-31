@@ -2,8 +2,8 @@
 
 **Fecha:** 2026-07-01
 **Estado:** Diseño aprobado (pendiente revisión final del documento)
-**Cliente:** Daniel de la Rosa · Correo personal: `correo@ejemplo.com`
-**Buzón de ingesta (nuestro):** `correo@ejemplo.com`
+**Cliente:** Daniel de la Rosa · Correo personal: `<correo-personal>`
+**Buzón de ingesta (nuestro):** `<buzon-ingesta>`
 
 ---
 
@@ -34,7 +34,7 @@ muestre en un panel claro.
 ## 3. Alcance
 
 ### Incluye (MVP)
-- Captura automática de los correos de Bancolombia vía un Gmail dedicado (`correo@ejemplo.com`).
+- Captura automática de los correos de Bancolombia vía un Gmail dedicado (`<buzon-ingesta>`).
 - Parseo del cuerpo del correo para extraer: monto, comercio, fecha/hora, tarjeta y tipo.
 - Registro de **solo gastos** (salidas de dinero).
 - Clasificación automática por reglas en **dos categorías: Transporte y Otros**, con
@@ -59,9 +59,9 @@ muestre en un panel claro.
 
 ```
 Bancolombia envía correo del movimiento
-   → llega al Gmail personal del cliente (correo@ejemplo.com)
+   → llega al Gmail personal del cliente (<correo-personal>)
    → [filtro de Gmail] reenvía SOLO los correos de Bancolombia
-   → buzón de ingesta nuestro (correo@ejemplo.com)
+   → buzón de ingesta nuestro (<buzon-ingesta>)
    → un cron gratuito (GitHub Actions, cada ~15 min) lee por IMAP los correos nuevos
    → el parser extrae: monto, comercio, fecha/hora, tarjeta, tipo
    → las reglas asignan categoría (Transporte / Otros)
@@ -81,14 +81,14 @@ nosotros controlamos** porque:
 - **Sin fricción de Google:** evitamos la verificación de "scopes restringidos" de la API
   de Gmail (que en modo prueba caduca el token cada 7 días).
 - **Escala:** para multiusuario futuro, cada cliente reenvía a
-  `correo@ejemplo.com`; Gmail entrega todo al mismo buzón conservando la
+  `<buzon-ingesta>`; Gmail entrega todo al mismo buzón conservando la
   etiqueta, y así se identifica de quién es cada movimiento.
 
 ### 4.3. Componentes
 
 Cada componente tiene una responsabilidad única y se puede probar por separado:
 
-1. **Ingestor (IMAP):** se conecta a `correo@ejemplo.com`, descarga los correos no
+1. **Ingestor (IMAP):** se conecta a `<buzon-ingesta>`, descarga los correos no
    leídos cuyo remitente sea Bancolombia, los pasa al parser y los marca como leídos.
    Corre en GitHub Actions con un cron.
 2. **Parser:** recibe el texto del correo y devuelve un objeto estructurado
@@ -117,7 +117,7 @@ Todo en capa gratuita. Costo objetivo: **$0/mes**.
 | Estilos / UI | **Tailwind CSS** | Estándar, rápido |
 
 **Nota:** la credencial del buzón de ingesta será una **contraseña de aplicación** de Gmail
-(requiere activar 2FA en `correo@ejemplo.com`). Se guardará como *secret* en GitHub
+(requiere activar 2FA en `<buzon-ingesta>`). Se guardará como *secret* en GitHub
 Actions y en las variables de entorno de Supabase/Vercel según corresponda — **nunca** en
 el repositorio.
 
@@ -218,7 +218,7 @@ de cada uno. Los movimientos de ingreso (p.ej. `Recibiste`) se ignoran en esta f
   *Mitigación:* se le entregará una guía paso a paso.
 - **Duplicados:** un mismo movimiento podría llegar dos veces. *Mitigación:* clave única por
   `Message-ID`.
-- **Contraseña de aplicación:** requiere 2FA activo en `correo@ejemplo.com`.
+- **Contraseña de aplicación:** requiere 2FA activo en `<buzon-ingesta>`.
 
 ## 10. Roadmap sugerido (alto nivel)
 

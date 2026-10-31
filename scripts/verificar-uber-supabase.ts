@@ -9,34 +9,31 @@ function requerir(n: string) {
   const v = process.env[n]; if (!v) throw new Error(`Falta: ${n}`); return v;
 }
 
+import { describirError } from "../src/ingest/log-seguro";
+
 const supabase = crearClienteServicio();
 const userId = requerir("CUENTAS_USER_ID");
 
 const { data, error } = await supabase
   .from("transacciones")
-  .select("id, fecha, monto, comercio, tarjeta, email_message_id")
+  .select("id, tarjeta")
   .eq("user_id", userId)
   .eq("comercio", "UBER RIDES")
   .order("fecha", { ascending: true });
 
 if (error) {
-  console.error("Error:", error.message);
+  console.error(`Error al consultar (${describirError(error)})`);
   process.exit(1);
 }
 
-console.log(`\nUBER RIDES en Supabase: ${data.length} registros\n`);
-console.log(`${"FECHA".padEnd(25)} ${"MONTO".padEnd(12)} TARJETA`);
-console.log("─".repeat(65));
+// Solo conteos: no se imprimen fechas, montos ni medios de pago.
+console.log(`\nUBER RIDES en Supabase: ${data.length} registros`);
 
 let desconocidos = 0;
 for (const tx of data) {
-  const tarjeta = String(tx.tarjeta ?? "null");
-  if (tarjeta === "Desconocido") desconocidos++;
-  const flag = tarjeta === "Desconocido" ? " ← ⚠️" : "";
-  console.log(`${String(tx.fecha).slice(0, 23).padEnd(25)} $${String(tx.monto).padEnd(10)} ${tarjeta}${flag}`);
+  if (String(tx.tarjeta ?? "null") === "Desconocido") desconocidos++;
 }
 
-console.log("─".repeat(65));
 if (desconocidos === 0) {
   console.log("\n✅ Sin registros 'Desconocido'. Todos los métodos de pago están correctos.");
 } else {

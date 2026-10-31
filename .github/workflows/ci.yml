@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # No hay configuración de ESLint en el repo, así que no se ejecuta lint.
+
+      - name: Build
+        run: npm run build
+        env:
+          # Valores ficticios: solo para que el build no falle; no apuntan a nada real.
+          NEXT_PUBLIC_SUPABASE_URL: https://ficticio.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: clave-ficticia-solo-para-ci
+          SUPABASE_URL: https://ficticio.invalid
+          SUPABASE_SERVICE_ROLE_KEY: clave-ficticia-solo-para-ci

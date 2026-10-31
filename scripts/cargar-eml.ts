@@ -10,6 +10,7 @@ import { parsearCorreo } from "../src/lib/parser";
 import { clasificar } from "../src/lib/classifier";
 import { crearClienteServicio } from "../src/lib/supabase";
 import { obtenerCategorias } from "../src/lib/categorias";
+import { describirError } from "../src/ingest/log-seguro";
 
 function requerir(nombre: string): string {
   const v = process.env[nombre];
@@ -58,14 +59,13 @@ for (const archivo of emls) {
       { onConflict: "user_id,email_message_id", ignoreDuplicates: true },
     );
     if (error) {
-      console.error(`  ✗ ${archivo}:`, error.message);
+      console.error(`  ✗ Error al guardar un correo (${describirError(error)})`);
     } else {
       guardados++;
-      console.log("  ✓ Movimiento guardado");
     }
   } else {
     ignorados++;
-    console.log(`  – ${archivo}: ignorado (${r.razon ?? "sin razón"})`);
+    // Sin nombre de archivo ni razón: solo conteo.
   }
 }
 

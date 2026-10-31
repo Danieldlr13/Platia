@@ -58,7 +58,7 @@ client component reutilizable.
 ## Fuera de alcance (siguiente paso)
 
 **Ruteo correo→usuario en el ingestor.** Hoy atribuye todo a `CUENTAS_USER_ID`.
-Multi-tenant real de datos requiere enrutar por alias (`correo@ejemplo.com`)
+Multi-tenant real de datos requiere enrutar por alias (`<buzon>+<cliente>@<dominio>`)
 o buzón por cliente. Se hará después; la web multi-cliente y el login no dependen
 de ello.
 

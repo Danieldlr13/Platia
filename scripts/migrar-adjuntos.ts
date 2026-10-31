@@ -1,16 +1,17 @@
 // Migración histórica: lee por IMAP el correo que contiene los .eml de
-// Bancolombia adjuntos (enviado desde danieldelarosa a buzon-dedicado) y los
-// guarda en Supabase.
+// Bancolombia adjuntos (enviado desde el Gmail personal al buzón de ingesta)
+// y los guarda en Supabase.
 //
 // A diferencia del ingestor principal, este script:
 //   1. No filtra por remitente/asunto de Bancolombia: busca todos los correos
-//      no leídos que llegaron de danieldelarosa (o que contengan adjuntos .eml).
+//      del remitente de migración (variable MIGRACION_REMITENTE).
 //   2. Recorre cada adjunto .eml y lo parsea individualmente.
 //   3. Usa upsert idempotente igual que el ingestor; se puede ejecutar varias
 //      veces sin duplicar datos.
 //
 // Uso: `npx tsx scripts/migrar-adjuntos.ts`
-// Requiere las variables de .env (IMAP_USER, IMAP_PASSWORD, SUPABASE_*, CUENTAS_USER_ID).
+// Requiere las variables de .env (IMAP_USER, IMAP_PASSWORD, SUPABASE_*, CUENTAS_USER_ID,
+// MIGRACION_REMITENTE). Los logs solo muestran conteos, nunca datos del correo.
 
 import "../src/lib/env";
 import { ImapFlow } from "imapflow";
@@ -19,6 +20,7 @@ import { parsearCorreo } from "../src/lib/parser";
 import { clasificar } from "../src/lib/classifier";
 import { crearClienteServicio } from "../src/lib/supabase";
 import { obtenerCategorias } from "../src/lib/categorias";
+import { describirError } from "../src/ingest/log-seguro";
 
 function requerir(nombre: string): string {
   const v = process.env[nombre];
@@ -28,8 +30,9 @@ function requerir(nombre: string): string {
 
 // ─── Configuración ───────────────────────────────────────────────────────────
 
-// Remitente del correo de migración.  Ajusta si usaste otra cuenta.
-const REMITENTE_MIGRACION = "correo@ejemplo.com";
+// Remitente del correo de migración (dirección del correo que envió los .eml
+// adjuntos). Se lee del entorno para no dejar direcciones personales en el repo.
+const REMITENTE_MIGRACION = requerir("MIGRACION_REMITENTE");
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
@@ -67,23 +70,16 @@ async function main() {
     );
 
     if (!uids || uids.length === 0) {
-      console.log(
-        `⚠️  No se encontraron correos de "${REMITENTE_MIGRACION}" en el buzón.`,
-      );
-      console.log(
-        "   Verifica que el correo llegó a correo@ejemplo.com y que REMITENTE_MIGRACION coincide.",
-      );
+      console.log("⚠️  No se encontraron correos del remitente de migración en el buzón.");
+      console.log("   Verifica que el correo llegó al buzón de ingesta y que MIGRACION_REMITENTE coincide.");
       return;
     }
 
-    console.log(
-      `📬 Encontrados ${uids.length} correo(s) de "${REMITENTE_MIGRACION}".\n`,
-    );
+    console.log(`📬 Encontrados ${uids.length} correo(s) del remitente de migración.\n`);
 
     // ── Fase 1: leer y acumular (sin comandos IMAP durante el fetch) ─────────
     interface Pendiente {
       record: Record<string, unknown>;
-      resumen: string;
     }
     const pendientes: Pendiente[] = [];
 
@@ -95,12 +91,7 @@ async function main() {
       leidos++;
       const envolvente = await simpleParser(msg.source as Buffer);
 
-      console.log(
-        `── Correo uid ${msg.uid}  |  Asunto: "${envolvente.subject ?? "(sin asunto)"}"`,
-      );
-      console.log(
-        `   De: ${envolvente.from?.text ?? "desconocido"}  |  Adjuntos: ${envolvente.attachments.length}`,
-      );
+      console.log(`── Correo uid ${msg.uid}  |  Adjuntos: ${envolvente.attachments.length}`);
 
       let encontrados = 0;
 
@@ -125,7 +116,6 @@ async function main() {
               raw_texto: envolvente.text.slice(0, 500),
               email_message_id: mid,
             },
-            resumen: `${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`,
           });
           encontrados++;
         }
@@ -178,17 +168,14 @@ async function main() {
                 raw_texto: texto.slice(0, 500),
                 email_message_id: mid,
               },
-              resumen: `${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`,
             });
             encontrados++;
           } else {
-            console.log(
-              `   – Adjunto ${adjIdx}: no reconocido como gasto (${r.razon ?? "sin razón"})`,
-            );
+            console.log(`   – Adjunto ${adjIdx}: no reconocido como gasto`);
             ignorados++;
           }
         } catch (e) {
-          console.error(`   ✗ Adjunto ${adjIdx}: error al parsear —`, e);
+          console.error(`   ✗ Adjunto ${adjIdx}: error al parsear (${describirError(e)})`);
           errores++;
         }
 
@@ -213,11 +200,10 @@ async function main() {
         });
 
       if (error) {
-        console.error(`  ✗ Error al guardar: ${error.message}`);
+        console.error(`  ✗ Error al guardar un movimiento (${describirError(error)})`);
         errores++;
       } else {
         guardados++;
-        console.log("  ✓ Movimiento guardado");
       }
     }
   } finally {
@@ -255,6 +241,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("\n❌ Fallo la migración:", err);
+  console.error(`\n❌ Fallo la migración (${describirError(err)})`);
   process.exit(1);
 });
