@@ -1,5 +1,5 @@
 // Migración de recibos de Uber (noreply@uber.com) adjuntos en el correo "uber"
-// de correo@ejemplo.com
+// del correo de migración (UID_CORREO_UBER).
 //
 // Diferencias frente al ingestor principal:
 //  • Usa parsearReciboUber (no parsearCorreo de Bancolombia).
@@ -9,7 +9,8 @@
 //  • El email_message_id usa el Message-ID interno del .eml adjunto.
 //
 // Uso: npx tsx scripts/migrar-uber.ts
-// Requiere variables de .env.
+// Requiere variables de .env. Los logs solo
+// muestran conteos, nunca datos del correo ni de los recibos.
 
 import "../src/lib/env";
 import { ImapFlow } from "imapflow";
@@ -17,6 +18,7 @@ import { simpleParser } from "mailparser";
 import { parsearReciboUber, htmlATexto } from "../src/lib/parser-uber";
 import { crearClienteServicio } from "../src/lib/supabase";
 import { obtenerCategorias } from "../src/lib/categorias";
+import { describirError } from "../src/ingest/log-seguro";
 
 function requerir(nombre: string): string {
   const v = process.env[nombre];
@@ -26,7 +28,6 @@ function requerir(nombre: string): string {
 
 // UID del correo que contiene los recibos de Uber adjuntos
 const UID_CORREO_UBER = 150;
-const REMITENTE = "correo@ejemplo.com";
 
 async function main() {
   const userId = requerir("CUENTAS_USER_ID");
@@ -53,12 +54,11 @@ async function main() {
 
   interface Pendiente {
     record: Record<string, unknown>;
-    resumen: string;
   }
   const pendientes: Pendiente[] = [];
 
   try {
-    console.log(`📬 Leyendo correo uid ${UID_CORREO_UBER} de ${REMITENTE}…\n`);
+    console.log(`📬 Leyendo correo uid ${UID_CORREO_UBER}…\n`);
 
     for await (const msg of client.fetch(
       [UID_CORREO_UBER],
@@ -66,7 +66,7 @@ async function main() {
       { uid: true },
     )) {
       const correo = await simpleParser(msg.source as Buffer);
-      console.log(`Correo: "${correo.subject}" — ${correo.attachments.length} adjuntos`);
+      console.log(`Correo con ${correo.attachments.length} adjuntos`);
 
       let adjIdx = 0;
       for (const att of correo.attachments) {
@@ -84,7 +84,7 @@ async function main() {
           const texto = interno.text || (interno.html ? htmlATexto(interno.html) : "");
 
           if (!texto) {
-            console.log(`  ⚠️  Adjunto ${adjIdx} sin texto ni HTML: "${asunto}" — se omite`);
+            console.log(`  ⚠️  Adjunto ${adjIdx} sin texto ni HTML — se omite`);
             ignorados++;
             adjIdx++;
             continue;
@@ -93,7 +93,7 @@ async function main() {
           const r = parsearReciboUber(texto, asunto);
 
           if (!r.ok || !r.recibo) {
-            console.log(`  – Adjunto ${adjIdx}: ${r.razon}`);
+            console.log(`  – Adjunto ${adjIdx}: no reconocido como recibo`);
             ignorados++;
             adjIdx++;
             continue;
@@ -103,7 +103,7 @@ async function main() {
 
           // Ignorar pagos fallidos
           if (recibo.pagoFallido) {
-            console.log(`  ✗ Adjunto ${adjIdx}: pago fallido — "${asunto}" — se omite`);
+            console.log(`  ✗ Adjunto ${adjIdx}: pago fallido — se omite`);
             fallidos++;
             adjIdx++;
             continue;
@@ -113,7 +113,6 @@ async function main() {
             interno.messageId ??
             `uber-uid${UID_CORREO_UBER}-adj${adjIdx}`;
 
-          const metodo = recibo.esEfectivo ? "efectivo" : recibo.metodoPago;
           pendientes.push({
             record: {
               user_id: userId,
@@ -128,10 +127,9 @@ async function main() {
               raw_texto: texto.slice(0, 500),
               email_message_id: mid,
             },
-            resumen: `$${recibo.monto.toLocaleString("es-CO")} · ${recibo.fecha.toLocaleDateString("es-CO")} · ${metodo}`,
           });
         } catch (e) {
-          console.error(`  ✗ Adjunto ${adjIdx}: error al parsear —`, e);
+          console.error(`  ✗ Adjunto ${adjIdx}: error al parsear (${describirError(e)})`);
           errores++;
         }
         adjIdx++;
@@ -149,11 +147,10 @@ async function main() {
         });
 
       if (error) {
-        console.error(`  ✗ ${p.resumen}: ${error.message}`);
+        console.error(`  ✗ Error al guardar un recibo (${describirError(error)})`);
         errores++;
       } else {
         guardados++;
-        console.log("  ✓ Movimiento guardado");
       }
     }
   } finally {
@@ -173,6 +170,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("\n❌ Fallo la migración de Uber:", err);
+  console.error(`\n❌ Fallo la migración de Uber (${describirError(err)})`);
   process.exit(1);
 });

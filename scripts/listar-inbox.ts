@@ -1,5 +1,5 @@
-// Muestra TODOS los correos del INBOX con remitente y asunto, para localizar
-// el correo de facturas/Bancolombia con el formato correcto.
+// Cuenta los correos del INBOX (total y no leídos) para comprobar la conexión
+// al buzón. No imprime remitentes ni asuntos.
 // Uso: npx tsx scripts/listar-inbox.ts
 
 import "../src/lib/env";
@@ -25,22 +25,9 @@ const lock = await client.getMailboxLock("INBOX");
 try {
   // Todos los correos del buzón
   const uids = await client.search({ all: true }, { uid: true });
-  console.log(`Total de correos en INBOX: ${uids.length}\n`);
-  console.log(
-    `${"UID".padEnd(8)} ${"LEÍDO".padEnd(6)} ${"DE".padEnd(40)} ASUNTO`,
-  );
-  console.log("─".repeat(100));
-
-  for await (const msg of client.fetch(
-    uids,
-    { uid: true, envelope: true, flags: true },
-    { uid: true },
-  )) {
-    const leido = msg.flags?.has("\\Seen") ? "✓" : " ";
-    const de = (msg.envelope?.from?.[0]?.address ?? "?").slice(0, 38);
-    const asunto = (msg.envelope?.subject ?? "(sin asunto)").slice(0, 50);
-    console.log(`${String(msg.uid).padEnd(8)} ${leido.padEnd(6)} ${de.padEnd(40)} ${asunto}`);
-  }
+  const noLeidos = await client.search({ seen: false }, { uid: true });
+  console.log(`Total de correos en INBOX: ${uids.length}`);
+  console.log(`No leídos: ${noLeidos ? noLeidos.length : 0}`);
 } finally {
   lock.release();
 }

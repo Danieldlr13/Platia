@@ -6,7 +6,6 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { simpleParser } from "mailparser";
 import { parsearCorreo } from "../src/lib/parser";
-import { clasificar } from "../src/lib/classifier";
 
 const RAIZ = process.cwd();
 
@@ -19,25 +18,25 @@ if (emls.length === 0) {
 
 console.log(`Encontrados ${emls.length} correos .eml\n`);
 
+let gastos = 0;
+let noGastos = 0;
+let noParseados = 0;
+
 for (const archivo of emls) {
   const crudo = await readFile(join(RAIZ, archivo));
   const correo = await simpleParser(crudo);
   const texto = correo.text ?? "";
   const r = parsearCorreo(texto);
 
-  console.log(`── ${archivo}`);
-  console.log(`   Message-ID: ${correo.messageId ?? "(sin id)"}`);
   if (r.ok && r.movimiento) {
-    const m = r.movimiento;
-    const cat = clasificar(m.comercio);
-    console.log("  ✓ Movimiento guardado");
-    console.log(`     Comercio : ${m.comercio}`);
-    console.log(`     Tarjeta  : ${m.tarjeta}`);
-    console.log(`     Fecha    : ${m.fecha.toISOString()} (${m.fechaTexto} ${m.horaTexto})`);
-    console.log(`     Categoría: ${cat}`);
-    console.log(`     Es gasto : ${r.esGasto ? "sí" : "no"}`);
+    if (r.esGasto) gastos++;
+    else noGastos++;
   } else {
-    console.log(`   ✗ No se pudo parsear: ${r.razon}`);
+    noParseados++;
   }
-  console.log("");
 }
+
+// Solo conteos: los .eml reales traen datos financieros y no deben imprimirse.
+console.log(
+  `Resultado: ${gastos} gastos · ${noGastos} movimientos que no son gasto · ${noParseados} no parseados.`,
+);

@@ -11,6 +11,7 @@ import { parsearCorreo } from "../lib/parser";
 import { clasificar } from "../lib/classifier";
 import { crearClienteServicio } from "../lib/supabase";
 import { obtenerCategorias } from "../lib/categorias";
+import { describirError } from "./log-seguro";
 
 function requerir(nombre: string): string {
   const v = process.env[nombre];
@@ -80,6 +81,7 @@ async function main() {
   let leidos = 0;
   let guardados = 0;
   let ignorados = 0;
+  let errores = 0;
 
   try {
     // Correos NO leídos de Bancolombia: por remitente (reenvío automático, que
@@ -101,7 +103,7 @@ async function main() {
     } else {
       // Paso 1: leer y parsear durante el fetch. NO se emiten comandos IMAP
       // aquí dentro (imapflow no lo permite mientras el fetch está abierto).
-      const pendientes: Array<{ record: Record<string, unknown>; resumen: string }> = [];
+      const pendientes: Array<{ record: Record<string, unknown> }> = [];
 
       for await (const msg of client.fetch(uids, { uid: true, source: true }, { uid: true })) {
         leidos++;
@@ -129,7 +131,6 @@ async function main() {
                 raw_texto: c.texto.slice(0, 500),
                 email_message_id: c.messageId,
               },
-              resumen: `${m.tipo} $${m.monto.toLocaleString("es-CO")} · ${m.comercio} · ${categoria}`,
             });
           }
         }
@@ -149,10 +150,11 @@ async function main() {
             ignoreDuplicates: true,
           });
         if (error) {
-          console.error("  ✗ Error al guardar:", error.message);
+          // Solo tipo y código: el mensaje puede incluir valores del registro.
+          errores++;
+          console.error(`  ✗ Error al guardar un movimiento (${describirError(error)})`);
         } else {
           guardados++;
-          console.log("  ✓ Movimiento guardado");
         }
       }
 
@@ -164,10 +166,10 @@ async function main() {
   }
 
   await client.logout();
-  console.log(`\nResumen: ${leidos} leídos · ${guardados} guardados · ${ignorados} ignorados.`);
+  console.log(`\nResumen: ${leidos} leídos · ${guardados} guardados · ${ignorados} ignorados · ${errores} con error.`);
 }
 
 main().catch((err) => {
-  console.error("Fallo el ingestor:", err);
+  console.error(`Fallo el ingestor (${describirError(err)})`);
   process.exit(1);
 });

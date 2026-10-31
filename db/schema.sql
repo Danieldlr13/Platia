@@ -1,4 +1,4 @@
--- Esquema de CUENTAS para Supabase (PostgreSQL).
+-- Esquema de Platia para Supabase (PostgreSQL).
 -- Ejecutar en el editor SQL de Supabase.
 --
 -- Diseñado para 1 usuario pero listo para multiusuario: todo cuelga de user_id
